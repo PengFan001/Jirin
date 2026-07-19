@@ -1,0 +1,18 @@
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'google/oriole/oriole:14/UP1A.231005.007/10808247:user/release-keys'
+Revision: 'MP1.0'
+ABI: 'arm64'
+Timestamp: 2024-01-15 10:45:00.000000000+0800
+Process uptime: 120s
+Cmd line: com.example.app
+
+pid: 9012, tid: 9012, name: main  >>> com.example.app <<<
+uid: 10123
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0000000000000000
+    x0  0000000000000000  x1  0000000000000001  x2  0000007f12345678
+    x3  0000000000000003  x4  0000000000000004  x5  0000000000000005
+backtrace:
+    #00 pc 0x0000000000012345  /data/app/~~abc/com.example.app-xyz/lib/arm64/libnative.so (Java_com_example_app_NativeLib_processData+0)
+    #01 pc 0x0000000000234567  /apex/com.android.art/lib64/libart.so (art_quick_generic_jni_trampoline+0)
+    #02 pc 0x0000000000345678  /apex/com.android.art/lib64/libart.so (art_invoke_method+0)
+    #03 pc 0x0000000000456789  /system/framework/arm64/boot-framework.oat

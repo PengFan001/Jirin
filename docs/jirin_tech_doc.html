@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jirin - 技术架构文档</title>
+    <style>
+        :root { --primary: #0f766e; --primary-light: #ccfbf1; --text: #1e293b; --text-light: #64748b; --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --accent: #7c3aed; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #064e3b 0%, #0f766e 100%); color: white; padding: 60px 0 40px; text-align: center; }
+        header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 8px; }
+        header p { font-size: 1.1rem; opacity: 0.9; }
+        .meta { margin-top: 16px; font-size: 0.85rem; opacity: 0.7; }
+        nav { background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        nav ul { display: flex; list-style: none; gap: 4px; padding: 8px 0; overflow-x: auto; }
+        nav a { display: block; padding: 8px 14px; color: var(--text-light); text-decoration: none; border-radius: 6px; font-size: 0.85rem; white-space: nowrap; }
+        nav a:hover { background: var(--primary-light); color: var(--primary); }
+        section { padding: 40px 0; }
+        section h2 { font-size: 1.5rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--primary); display: inline-block; }
+        section h3 { font-size: 1.15rem; margin: 20px 0 10px; color: var(--primary); }
+        section h4 { font-size: 1rem; margin: 16px 0 8px; color: var(--accent); }
+        pre { background: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; margin: 12px 0; }
+        code { font-family: 'JetBrains Mono', monospace; }
+        .inline-code { background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; color: #be185d; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--primary-light); font-weight: 600; color: var(--primary); }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 16px 0; }
+        /* Architecture diagram */
+        .arch-diagram { background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 32px 24px; margin: 24px 0; }
+        .arch-title { text-align: center; font-weight: 700; font-size: 1.1rem; margin-bottom: 24px; color: var(--primary); }
+        .arch-layer { border: 2px solid; border-radius: 8px; padding: 16px; margin: 12px 0; }
+        .arch-layer-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 10px; padding: 4px 10px; border-radius: 4px; display: inline-block; }
+        .arch-boxes { display: flex; flex-wrap: wrap; gap: 8px; }
+        .arch-box { background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 14px; font-size: 0.82rem; text-align: center; min-width: 100px; }
+        .arch-box small { display: block; color: var(--text-light); font-size: 0.75rem; }
+        .layer-app { border-color: #3b82f6; }
+        .layer-app .arch-layer-title { background: #dbeafe; color: #1d4ed8; }
+        .layer-core { border-color: #10b981; }
+        .layer-core .arch-layer-title { background: #d1fae5; color: #065f46; }
+        .layer-knowledge { border-color: #f59e0b; }
+        .layer-knowledge .arch-layer-title { background: #fef3c7; color: #92400e; }
+        .layer-infra { border-color: #8b5cf6; }
+        .layer-infra .arch-layer-title { background: #ede9fe; color: #5b21b6; }
+        .arch-arrow { text-align: center; font-size: 1.2rem; color: var(--text-light); margin: 4px 0; }
+        /* Sequence diagram */
+        .seq-diagram { background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 24px; margin: 24px 0; overflow-x: auto; }
+        .seq-title { text-align: center; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
+        .seq-row { display: flex; align-items: center; min-height: 36px; font-size: 0.82rem; }
+        .seq-actor { width: 120px; font-weight: 600; text-align: center; flex-shrink: 0; }
+        .seq-msg { flex: 1; padding: 4px 8px; border-left: 2px solid var(--primary); margin-left: 8px; }
+        .seq-msg.reply { border-left-color: var(--accent); border-left-style: dashed; }
+        .seq-divider { border-top: 1px dashed #cbd5e1; margin: 4px 0 4px 120px; }
+        footer { text-align: center; padding: 32px 0; color: var(--text-light); font-size: 0.85rem; border-top: 1px solid var(--border); }
+        @media (max-width: 768px) { .arch-boxes { flex-direction: column; } }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <h1>Jirin 技术架构文档</h1>
+        <p>Android 稳定性问题分析 AI Agent - 系统设计与实现方案</p>
+        <div class="meta">Version 0.4.0 | 2025</div>
+    </div>
+</header>
+
+<nav>
+    <div class="container">
+        <ul>
+            <li><a href="#background">需求背景</a></li>
+            <li><a href="#architecture">架构设计</a></li>
+            <li><a href="#tech-stack">技术选型</a></li>
+            <li><a href="#core-design">核心设计</a></li>
+            <li><a href="#knowledge">知识库方案</a></li>
+            <li><a href="#learning">自学习机制</a></li>
+            <li><a href="#export-design">导出方案</a></li>
+            <li><a href="#modules">模块实现</a></li>
+        </ul>
+    </div>
+</nav>
+
+<section id="background">
+    <div class="container">
+        <h2>1. 需求背景</h2>
+        <h3>1.1 业务痛点</h3>
+        <p>Android 系统应用开发中，稳定性问题（JE/ANR/NE）的分析是一项高成本、高专业门槛的工作：</p>
+        <ul style="margin: 12px 0 12px 24px;">
+            <li>问题分析需要深入理解 Android 源码和框架层机制</li>
+            <li>日志分析流程复杂，需要多步骤关联分析</li>
+            <li>责任归属判断需要丰富的经验积累</li>
+            <li>同类问题反复出现，缺乏知识沉淀机制</li>
+        </ul>
+        <h3>1.2 目标</h3>
+        <p>构建一个 AI Agent 工具，具备以下核心能力：</p>
+        <table>
+            <tr><th>能力</th><th>描述</th></tr>
+            <tr><td>自动化分析</td><td>自动识别问题类型，调用专业 Agent 进行端到端分析</td></tr>
+            <tr><td>源码级知识</td><td>内置 Android 源码级的 JE/ANR/NE 原理知识</td></tr>
+            <tr><td>责任归属</td><td>准确判断问题责任方（App/SDK/System/Driver）</td></tr>
+            <tr><td>自学习</td><td>从历史案例中学习，持续提升分析准确性</td></tr>
+            <tr><td>可扩展</td><td>支持多 Agent 并行，支持导出为插件</td></tr>
+        </table>
+    </div>
+</section>
+
+<section id="architecture" style="background: white;">
+    <div class="container">
+        <h2>2. 架构设计</h2>
+        <h3>2.1 整体架构</h3>
+        <p>采用分层架构 + 多 Agent 编排的设计模式：</p>
+        
+        <div class="arch-diagram">
+            <div class="arch-title">Jirin 系统架构图</div>
+            
+            <div class="arch-layer layer-app">
+                <div class="arch-layer-title">接入层 (CLI Interface)</div>
+                <div class="arch-boxes">
+                    <div class="arch-box">analyze 命令<small>日志分析入口</small></div>
+                    <div class="arch-box">learn 命令<small>知识库管理</small></div>
+                    <div class="arch-box">export 命令<small>插件导出</small></div>
+                    <div class="arch-box">config 命令<small>配置管理</small></div>
+                    <div class="arch-box">report 模块<small>text/md/html 输出</small></div>
+                </div>
+            </div>
+            <div class="arch-arrow">&darr;&darr;&darr;</div>
+            
+            <div class="arch-layer layer-core">
+                <div class="arch-layer-title">编排层 (Agent Orchestration - LangGraph)</div>
+                <div class="arch-boxes">
+                    <div class="arch-box">Orchestrator<small>分类 + 路由</small></div>
+                    <div class="arch-box">JE Agent<small>Java Exception</small></div>
+                    <div class="arch-box">ANR Agent<small>ANR 分析</small></div>
+                    <div class="arch-box">NE Agent<small>Native Exception</small></div>
+                    <div class="arch-box">Correlator<small>MIXED 因果关联</small></div>
+                    <div class="arch-box">Summary Agent<small>报告合成</small></div>
+                    <div class="arch-box">LLMClient<small>重试/超时/降级</small></div>
+                    <div class="arch-box">Send API<small>真并行 fan-out</small></div>
+                </div>
+            </div>
+            <div class="arch-arrow">&darr;&darr;&darr;</div>
+            
+            <div class="arch-layer layer-knowledge">
+                <div class="arch-layer-title">知识层 (Knowledge Base)</div>
+                <div class="arch-boxes">
+                    <div class="arch-box">静态知识<small>je/anr/ne/memory/system</small></div>
+                    <div class="arch-box">案例库<small>历史分析案例</small></div>
+                    <div class="arch-box">记忆系统<small>纠错 + 强化</small></div>
+                    <div class="arch-box">日志解析器<small>JE/ANR/NE Parser</small></div>
+                    <div class="arch-box">日志扫描器<small>多平台目录识别</small></div>
+                    <div class="arch-box">代码搜索<small>AOSP 源码路径 + 调用链</small></div>
+                    <div class="arch-box">反馈系统<small>用户反馈 + 案例修正</small></div>
+                </div>
+            </div>
+            <div class="arch-arrow">&darr;&darr;&darr;</div>
+            
+            <div class="arch-layer layer-infra">
+                <div class="arch-layer-title">基础设施层 (Infrastructure)</div>
+                <div class="arch-boxes">
+                    <div class="arch-box">LiteLLM<small>多模型统一接口</small></div>
+                    <div class="arch-box">ChromaDB<small>向量存储</small></div>
+                    <div class="arch-box">JSON Store<small>案例持久化</small></div>
+                    <div class="arch-box">Exporter<small>Skill/Rules/Codex</small></div>
+                    <div class="arch-box">Report<small>text/md/html</small></div>
+                </div>
+            </div>
+        </div>
+
+        <h3>2.2 Agent 编排流程</h3>
+        <div class="seq-diagram">
+            <div class="seq-title">多 Agent 分析时序图</div>
+            <div class="seq-row"><div class="seq-actor">User</div><div class="seq-msg">输入日志文件</div></div>
+            <div class="seq-row"><div class="seq-actor">Orchestrator</div><div class="seq-msg">规则匹配 + LLM 分类 → 确定问题类型</div></div>
+            <div class="seq-row"><div class="seq-actor"></div><div class="seq-msg">检索知识库 + 相似案例</div></div>
+            <div class="seq-divider"></div>
+            <div class="seq-row"><div class="seq-actor">JE/ANR/NE Agent</div><div class="seq-msg">构建 Prompt (日志 + 知识 + 案例 + AOSP源码路径) → 调用 LLM</div></div>
+            <div class="seq-row"><div class="seq-actor"></div><div class="seq-msg reply">返回: 根因 + 责任方 + 证据 + 建议</div></div>
+            <div class="seq-divider"></div>
+            <div class="seq-row"><div class="seq-actor">Correlator</div><div class="seq-msg">(MIXED only) 跨类型因果关联分析 → 确定因果链</div></div>
+            <div class="seq-divider"></div>
+            <div class="seq-row"><div class="seq-actor">Summary Agent</div><div class="seq-msg">汇总各 Agent 结果 + 关联分析 → 调用 LLM 生成报告</div></div>
+            <div class="seq-row"><div class="seq-actor"></div><div class="seq-msg reply">返回: 结构化分析报告</div></div>
+            <div class="seq-divider"></div>
+            <div class="seq-row"><div class="seq-actor">Reflector</div><div class="seq-msg">提取模式 → 存储案例 → 更新知识库</div></div>
+            <div class="seq-row"><div class="seq-actor">User</div><div class="seq-msg reply">接收分析报告</div></div>
+            <div class="seq-row"><div class="seq-actor">User</div><div class="seq-msg">反馈: 准确/不准确/修正 → 存入案例库</div></div>
+        </div>
+    </div>
+</section>
+
+<section id="tech-stack">
+    <div class="container">
+        <h2>3. 技术选型</h2>
+        <table>
+            <tr><th>层面</th><th>选型</th><th>理由</th></tr>
+            <tr><td>语言</td><td>Python 3.11+</td><td>AI 生态最成熟，LangChain/LangGraph 等框架丰富</td></tr>
+            <tr><td>Agent 框架</td><td>LangGraph</td><td>原生支持多 Agent 编排、并行执行、状态管理</td></tr>
+            <tr><td>LLM 抽象</td><td>LiteLLM</td><td>统一接口调用 100+ 模型，运行时按配置切换</td></tr>
+            <tr><td>向量存储</td><td>ChromaDB</td><td>轻量嵌入式，无需额外服务，适合本地 CLI</td></tr>
+            <tr><td>Embedding</td><td>sentence-transformers</td><td>本地向量化，无需网络依赖</td></tr>
+            <tr><td>CLI</td><td>Typer + Rich</td><td>现代 CLI 框架，输出美观</td></tr>
+            <tr><td>配置</td><td>TOML</td><td>统一项目配置和运行时配置</td></tr>
+        </table>
+    </div>
+</section>
+
+<section id="core-design" style="background: white;">
+    <div class="container">
+        <h2>4. 核心设计</h2>
+        
+        <h3>4.1 状态管理 (AnalysisState)</h3>
+        <p>使用 Pydantic 模型定义 Agent 间共享的状态，在 LangGraph 图中流转：</p>
+        <pre><code>class AnalysisState(BaseModel):
+    raw_log: str              # 原始日志
+    detected_types: list      # 检测到的问题类型
+    parsed_data: dict         # 解析后的结构化数据
+    agent_results: dict       # 各 Agent 分析结果
+    relevant_knowledge: list  # 检索到的知识
+    similar_cases: list       # 相似历史案例
+    final_report: str         # 最终报告</code></pre>
+
+        <h3>4.2 Orchestrator 分类机制</h3>
+        <p>采用两阶段分类策略：</p>
+        <div class="card">
+            <h4>Phase 1: 规则匹配（快速、零成本）</h4>
+            <p>使用正则表达式匹配日志特征模式，每种类型定义多个 pattern，达到阈值即判定。</p>
+        </div>
+        <div class="card">
+            <h4>Phase 2: LLM 分类（精确、处理边界情况）</h4>
+            <p>当规则匹配不确定或检测到混合类型时，调用 LLM 进行精确分类。</p>
+        </div>
+
+        <h3>4.3 Agent 基类设计</h3>
+        <pre><code>class BaseAgent(ABC):
+    agent_name: str
+    issue_type: IssueType
+    
+    @abstractmethod
+    def get_system_prompt(self) -> str: ...
+    
+    @abstractmethod
+    def build_analysis_prompt(self, state) -> str: ...
+    
+    async def analyze(self, state) -> AgentResult:
+        # 1. 构建 prompt
+        # 2. 注入知识库上下文
+        # 3. 注入相似案例 (few-shot, 反馈感知)
+        # 4. 注入 AOSP 源码路径上下文
+        # 5. 调用 LLM
+        # 6. 解析结构化结果</code></pre>
+    </div>
+</section>
+
+<section id="knowledge">
+    <div class="container">
+        <h2>5. 知识库方案</h2>
+        <h3>5.1 三层知识架构</h3>
+        <div class="arch-diagram">
+            <div class="arch-title">知识库架构图</div>
+            <div class="arch-layer layer-knowledge">
+                <div class="arch-layer-title">静态知识层 (内置)</div>
+                <div class="arch-boxes">
+                    <div class="arch-box">je/*<small>5 篇: 总览+异常+生命周期+Binder+system_server</small></div>
+                    <div class="arch-box">anr/*<small>5 篇: 总览+Input+Service+锁竞争+Binder</small></div>
+                    <div class="arch-box">ne/*<small>5 篇: 总览+信号+Tombstone+内存+调试工具</small></div>
+                    <div class="arch-box">memory/*<small>3 篇: 泄漏总览+常见模式+OOM Kill</small></div>
+                    <div class="arch-box">system/*<small>3 篇: Watchdog+LMK+system_server崩溃</small></div>
+                </div>
+            </div>
+            <div class="arch-arrow">&darr; 向量化 &darr;</div>
+            <div class="arch-layer layer-infra">
+                <div class="arch-layer-title">ChromaDB 向量索引</div>
+                <div class="arch-boxes">
+                    <div class="arch-box">static_knowledge<small>静态知识集合</small></div>
+                    <div class="arch-box">case_embeddings<small>案例向量集合</small></div>
+                </div>
+            </div>
+            <div class="arch-arrow">&uarr; 写入 &uarr;</div>
+            <div class="arch-layer layer-core">
+                <div class="arch-layer-title">动态知识层 (自学习)</div>
+                <div class="arch-boxes">
+                    <div class="arch-box">CaseStore<small>JSON 案例存储 + 反馈</small></div>
+                    <div class="arch-box">MemoryManager<small>纠错 + 强化记忆</small></div>
+                    <div class="arch-box">Classifier<small>根因分类器</small></div>
+                </div>
+            </div>
+            <div class="arch-arrow">&uarr; 反馈写入 &uarr;</div>
+            <div class="arch-layer layer-app">
+                <div class="arch-layer-title">AOSP 源码层 (可选)</div>
+                <div class="arch-boxes">
+                    <div class="arch-box">CodeSearch<small>30+ 内置框架路径映射</small></div>
+                    <div class="arch-box">调用链知识<small>JE/ANR/NE 关键链路</small></div>
+                    <div class="arch-box">本地源码搜索<small>可选 AOSP source dir</small></div>
+                </div>
+            </div>
+        </div>
+
+        <h3>5.2 知识检索流程</h3>
+        <p>Agent 分析时，系统自动检索相关知识：</p>
+        <ol style="margin: 12px 0 12px 24px;">
+            <li>根据问题类型检索对应的静态知识文档</li>
+            <li>使用日志内容在向量库中搜索相似历史案例</li>
+            <li>将检索结果作为上下文注入 Agent 的 Prompt</li>
+        </ol>
+        <h3>5.3 AOSP 源码搜索</h3>
+        <p>采用双层架构，无需本地 AOSP 源码也能工作：</p>
+        <div class="card">
+            <h4>Tier 1: 内置知识层（始终可用）</h4>
+            <p>预构建的 30+ 框架组件路径映射（AMS、Input、debuggerd 等）+ 5 条关键调用链（JE crash flow、ANR input/service/broadcast timeout、NE crash flow），Agent 分析时自动注入相关源码路径。</p>
+        </div>
+        <div class="card">
+            <h4>Tier 2: 本地源码层（可选配置）</h4>
+            <p>配置 <code class="inline-code">[source] aosp_source_dir</code> 后，支持在本地 AOSP 源码树中搜索方法定义，提供更精确的代码级上下文。</p>
+        </div>
+
+        <h3>5.4 用户反馈闭环</h3>
+        <p>分析完成后可收集用户反馈（y/n/correction），存入 CaseStore：</p>
+        <ol style="margin: 12px 0 12px 24px;">
+            <li>正面反馈：标记案例为 "verified"，后续优先展示</li>
+            <li>负面反馈：记录原因，辅助改进</li>
+            <li>修正反馈：将用户纠正注入相似案例上下文，避免 LLM 重复犯错</li>
+        </ol>
+    </div>
+</section>
+
+<section id="learning" style="background: white;">
+    <div class="container">
+        <h2>6. 自学习机制</h2>
+        <div class="card">
+            <h4>Reflector (反思器)</h4>
+            <p>每次分析完成后，Reflector 调用 LLM 提取根因模式、关键指标、解决方案分类，形成结构化学习记录。</p>
+        </div>
+        <div class="card">
+            <h4>Classifier (分类器)</h4>
+            <p>基于关键词匹配将根因归入预定义类别（如 null_pointer、lock_contention、jni_error 等），便于模式检索。</p>
+        </div>
+        <div class="card">
+            <h4>MemoryManager (记忆管理)</h4>
+            <p>管理长期记忆，包括：</p>
+            <ul style="margin: 8px 0 8px 20px;">
+                <li><strong>纠错记录</strong>：用户纠正的错误分析，避免重复犯错</li>
+                <li><strong>强化记录</strong>：确认正确的分析，增强信心</li>
+                <li><strong>通用洞察</strong>：从分析中提炼的通用经验</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section id="export-design">
+    <div class="container">
+        <h2>7. 导出方案</h2>
+        <p>导出的核心是将 <strong>知识库 + 分析流程 + Agent Prompt</strong> 打包，而非代码本身。</p>
+        <table>
+            <tr><th>目标</th><th>格式</th><th>内容</th></tr>
+            <tr><td>Qoder</td><td>SKILL.md + assets/</td><td>Agent prompt + 知识库摘要 + 分析流程</td></tr>
+            <tr><td>Cursor</td><td>.cursor/rules/</td><td>规则文件 + 分析指导</td></tr>
+            <tr><td>Codex</td><td>AGENTS.md + jirin_knowledge/</td><td>Agent 配置 + 知识库文档</td></tr>
+            <tr><td>通用</td><td>Markdown 文档包</td><td>知识库 + 方法论 + Agent prompts</td></tr>
+        </table>
+    </div>
+</section>
+
+<section id="modules" style="background: white;">
+    <div class="container">
+        <h2>8. 模块实现细节</h2>
+        <h3>8.1 项目结构</h3>
+        <pre><code>Jirin/
+├── pyproject.toml              # 项目配置
+├── config/settings.toml        # 运行时配置
+├── src/jirin/
+│   ├── core/                   # 编排层
+│   │   ├── state.py            # AnalysisState 状态定义
+│   │   ├── context.py          # ExecutionContext 上下文
+│   │   ├── agent_graph.py      # LangGraph 图定义
+│   │   └── orchestrator.py     # 分类 + 路由
+│   ├── agents/                 # Agent 层
+│   │   ├── base.py             # BaseAgent 抽象基类
+│   │   ├── je_agent.py         # JE 分析 Agent
+│   │   ├── anr_agent.py        # ANR 分析 Agent
+│   │   ├── ne_agent.py         # NE 分析 Agent
+│   │   └── summary_agent.py    # 报告合成 Agent
+│   ├── knowledge/              # 知识层
+│   │   ├── manager.py          # 知识库管理器
+│   │   ├── vector_store.py     # ChromaDB 向量存储
+│   │   ├── case_store.py       # 案例存储
+│   │   └── static/             # 静态知识文档
+│   │       ├── je/             # JE 知识 (5 篇)
+│   │       ├── anr/            # ANR 知识 (5 篇)
+│   │       ├── ne/             # NE 知识 (5 篇)
+│   │       ├── memory/         # 内存知识 (3 篇)
+│   │       └── system/         # 系统知识 (3 篇)
+│   ├── tools/                  # 工具层
+│   │   ├── log_parser/         # 专业日志解析器 (je/anr/ne_parser)
+│   │   ├── log_scanner.py      # 多平台目录扫描器
+│   │   ├── search/
+│   │   │   └── code_search.py  # AOSP 源码搜索 (双层架构)
+│   │   └── device/adb.py       # ADB 工具
+│   ├── learning/               # 学习模块
+│   │   ├── reflector.py        # 反思器
+│   │   ├── classifier.py       # 分类器
+│   │   └── memory.py           # 记忆管理
+│   ├── export/                 # 导出模块
+│   │   ├── qoder_skill.py      # Qoder 导出
+│   │   ├── cursor_rules.py     # Cursor 导出
+│   │   ├── codex_agents.py     # Codex 导出
+│   │   ├── generic.py          # 通用导出
+│   │   └── report.py           # 报告生成 (text/md/html)
+│   ├── core/
+│   │   └── llm_client.py       # LLM 统一客户端 (重试/超时)
+│   ├── utils/
+│   │   └── logging_config.py   # 结构化日志配置
+│   └── cli/                    # CLI 入口
+│       └── main.py             # Typer 应用
+├── data/                       # 运行时数据
+└── tests/                      # 测试</code></pre>
+
+        <h3>8.2 关键实现要点</h3>
+        <table>
+            <tr><th>模块</th><th>关键实现</th></tr>
+            <tr><td>Orchestrator</td><td>正则预分类 + LLM 精确分类，两阶段策略降低 LLM 调用成本</td></tr>
+            <tr><td>Agent 基类</td><td>模板方法模式，子类只需实现 prompt 构建，共享 LLMClient</td></tr>
+            <tr><td>LLMClient</td><td>统一 LLM 调用，指数退避重试，超时控制，结构化错误降级</td></tr>
+            <tr><td>并行路由</td><td>LangGraph Send API 实现真正的 fan-out 并行多 Agent 执行</td></tr>
+            <tr><td>Correlator</td><td>MIXED 场景下跨类型因果关联分析，确定因果链和修复优先级</td></tr>
+            <tr><td>AOSP 源码搜索</td><td>双层架构：30+ 内置框架路径 + 可选本地源码深度搜索</td></tr>
+            <tr><td>用户反馈</td><td>分析后交互式收集反馈，存入案例库，反馈感知相似案例检索</td></tr>
+            <tr><td>知识库</td><td>21 篇源码级知识文档，按 je/anr/ne/memory/system 分类</td></tr>
+            <tr><td>日志扫描器</td><td>支持 Qualcomm/MTK/SPRD 平台目录结构识别与学习</td></tr>
+            <tr><td>报告输出</td><td>纯文本/Markdown/HTML 三种输出格式，默认纯文本</td></tr>
+            <tr><td>日志解析</td><td>专业解析器（je_parser/anr_parser/ne_parser）提取丰富结构化数据，替代旧版正则提取</td></tr>
+            <tr><td>自学习</td><td>分析后 LLM 反思提取模式 → 分类归档 → 向量索引，形成闭环</td></tr>
+            <tr><td>导出</td><td>支持 Qoder Skill / Cursor Rules / Codex AGENTS.md / 通用 Markdown</td></tr>
+        </table>
+    </div>
+</section>
+
+<footer><div class="container"><p>Jirin v0.4.0 | Technical Architecture Document</p></div></footer>
+</body>
+</html>

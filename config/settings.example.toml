@@ -1,0 +1,83 @@
+# Jirin Runtime Configuration
+# Copy this file to settings.toml and fill in your values
+
+[llm]
+# Provider: "openai", "anthropic", "ollama", etc.
+# For Chinese LLMs (Qwen/DeepSeek/Kimi), use provider = "openai" with custom api_base
+provider = "openai"
+model = "gpt-4o"
+api_key = ""
+api_base = ""
+temperature = 0.1
+max_tokens = 4096
+
+# --- Example: OpenAI ---
+# provider = "openai"
+# model = "gpt-4o"
+# api_key = "sk-xxx"
+
+# --- Example: Anthropic (Claude) ---
+# provider = "anthropic"
+# model = "claude-sonnet-4-20250514"
+# api_key = "sk-ant-xxx"
+
+# --- Example: DeepSeek V4 Pro ---
+# provider = "openai"
+# model = "deepseek-chat"
+# api_key = "sk-xxx"
+# api_base = "https://api.deepseek.com/v1"
+
+# --- Example: Qwen (通义千问) ---
+# provider = "openai"
+# model = "qwen-plus"
+# api_key = "sk-xxx"
+# api_base = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+# --- Example: Kimi K3 (Moonshot) ---
+# provider = "openai"
+# model = "kimi-k3"
+# api_key = "sk-xxx"
+# api_base = "https://api.moonshot.cn/v1"
+
+# --- Example: Ollama (local, no API Key needed) ---
+# provider = "ollama"
+# model = "qwen2.5:14b"
+# api_base = "http://localhost:11434"
+
+[llm.ollama]
+model = "qwen2.5:14b"
+api_base = "http://localhost:11434"
+
+[embedding]
+# Provider: "local" (sentence-transformers) or "openai"
+provider = "local"
+model_name = "all-MiniLM-L6-v2"
+
+[embedding.openai]
+model = "text-embedding-3-small"
+api_key = ""
+
+[knowledge]
+# Path to static knowledge documents
+static_dir = "src/jirin/knowledge/static"
+# Maximum number of similar cases to retrieve
+max_similar_cases = 5
+# Similarity threshold (0.0 - 1.0)
+similarity_threshold = 0.7
+
+[storage]
+# Path to persistent data
+data_dir = "data"
+cases_dir = "data/cases"
+memory_dir = "data/memory"
+vector_db_dir = "data/vector_db"
+
+[export]
+# Default export directory
+output_dir = "data/exports"
+
+[source]
+# Optional: path to local AOSP source tree for deep code search.
+# When configured, agents can search actual source code for framework classes/methods.
+# When not set, agents use built-in framework path knowledge (always available).
+# aosp_source_dir = "/path/to/android/source"

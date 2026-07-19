@@ -1,0 +1,12 @@
+01-15 10:30:00.000  5678  5678 I am_anr: [0,5678,com.example.app,0,Input dispatching timed out]
+01-15 10:30:00.000  5678  5678 I InputDispatcher: ANR in com.example.app (com.example.app/.MainActivity)
+01-15 10:30:00.000  5678  5678 I InputDispatcher: Reason: Input dispatching timed out
+01-15 10:30:00.000  5678  5678 I InputDispatcher: Subject: ANR in com.example.app (com.example.app/.MainActivity)
+01-15 10:30:00.000  5678  5678 I InputDispatcher: LOAD: 12.5
+01-15 10:30:00.000  5678  5678 I InputDispatcher:
+01-15 10:30:00.000  5678  5678 I InputDispatcher: "main" prio=5 tid=1 Blocked
+01-15 10:30:00.000  5678  5678 I InputDispatcher:   | group="main" sCount=1 dsCount=0 flags=1 obj=0x70a0b2c8 self=0xb400007f12345678
+01-15 10:30:00.000  5678  5678 I InputDispatcher:   java.lang.Thread.State: BLOCKED (on object monitor)
+01-15 10:30:00.000  5678  5678 I InputDispatcher:   at com.example.app.DataManager.processData(DataManager.java:120)
+01-15 10:30:00.000  5678  5678 I InputDispatcher:   - waiting to lock <0x12345678> (a java.lang.Object) held by thread 15
+01-15 10:30:00.000  5678  5678 I InputDispatcher:   at com.example.app.MainActivity.onButtonClick(MainActivity.java:55)

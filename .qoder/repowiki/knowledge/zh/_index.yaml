@@ -1,0 +1,19 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+branch: Q0DeR-MaG1C-BrAnCh-Fo2-NoN-GiT-Or-No-C0MmIt
+nodes_managed: true
+exported_at: "2026-07-19T11:49:22Z"
+modules:
+    "":
+        dir_name: 项目构建配置与运行时设置
+        title: 项目构建配置与运行时设置
+        scope:
+            - config/
+            - data/
+            - .gitignore
+            - pyproject.toml
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
