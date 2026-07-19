@@ -1,9 +1,11 @@
 """Unified LLM client with retry, timeout, and fallback.
 
-Wraps litellm.completion with:
+Uses httpx to call OpenAI-compatible APIs directly with:
 - Exponential backoff retry (configurable max retries)
 - Timeout control
 - Structured error fallback instead of crash
+
+Supports all OpenAI-compatible providers: OpenAI, DeepSeek, Qwen, Kimi, Ollama, etc.
 """
 
 from __future__ import annotations
@@ -13,9 +15,18 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-import litellm
+import httpx
 
 logger = logging.getLogger(__name__)
+
+# Default API base URLs for common providers
+PROVIDER_DEFAULTS: dict[str, str] = {
+    "openai": "https://api.openai.com/v1",
+    "ollama": "http://localhost:11434/v1",
+    "deepseek": "https://api.deepseek.com/v1",
+    "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "kimi": "https://api.moonshot.cn/v1",
+}
 
 
 @dataclass
@@ -31,6 +42,9 @@ class LLMResponse:
 
 class LLMClient:
     """Unified LLM client with retry and error handling.
+
+    Calls OpenAI-compatible APIs directly via httpx.
+    Supports: OpenAI, DeepSeek, Qwen, Kimi, Ollama, and any OpenAI-compatible endpoint.
 
     Usage:
         client = LLMClient(llm_config)
@@ -50,12 +64,43 @@ class LLMClient:
         self.provider = llm_config.get("provider", "openai")
         self.model = llm_config.get("model", "gpt-4o")
         self.api_key = llm_config.get("api_key", "")
-        self.api_base = llm_config.get("api_base", "")
+        self.api_base = self._resolve_api_base(llm_config)
         self.temperature = llm_config.get("temperature", 0.1)
         self.max_tokens = llm_config.get("max_tokens", 4096)
         self.max_retries = max_retries
         self.timeout = timeout
-        self._full_model = f"{self.provider}/{self.model}"
+
+    def _resolve_api_base(self, llm_config: dict[str, Any]) -> str:
+        """Resolve the API base URL from config or provider defaults."""
+        # If user explicitly configured api_base, use it
+        configured_base = llm_config.get("api_base", "")
+        if configured_base:
+            return configured_base.rstrip("/")
+
+        # Fall back to provider default
+        provider = self.provider.lower()
+        if provider in PROVIDER_DEFAULTS:
+            return PROVIDER_DEFAULTS[provider]
+
+        # Unknown provider: assume OpenAI-compatible with provider name as hint
+        return PROVIDER_DEFAULTS.get("openai", "https://api.openai.com/v1")
+
+    @property
+    def _completions_url(self) -> str:
+        """Get the chat completions endpoint URL."""
+        base = self.api_base
+        # Ensure the URL ends with /v1 or similar, then append /chat/completions
+        if base.endswith("/v1"):
+            return f"{base}/chat/completions"
+        return f"{base}/v1/chat/completions"
+
+    @property
+    def _headers(self) -> dict[str, str]:
+        """Get request headers."""
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
     async def complete(
         self,
@@ -76,50 +121,62 @@ class LLMClient:
         temp = temperature if temperature is not None else self.temperature
         tokens = max_tokens if max_tokens is not None else self.max_tokens
 
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temp,
+            "max_tokens": tokens,
+        }
+
         last_error = ""
         for attempt in range(1, self.max_retries + 1):
             try:
                 logger.debug(
-                    "LLM call attempt %d/%d, model=%s",
-                    attempt, self.max_retries, self._full_model,
+                    "LLM call attempt %d/%d, model=%s, url=%s",
+                    attempt, self.max_retries, self.model, self._completions_url,
                 )
 
-                response = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        litellm.completion,
-                        model=self._full_model,
-                        messages=messages,
-                        temperature=temp,
-                        max_tokens=tokens,
-                        api_key=self.api_key or None,
-                        api_base=self.api_base or None,
-                    ),
-                    timeout=self.timeout,
-                )
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        self._completions_url,
+                        json=payload,
+                        headers=self._headers,
+                    )
 
-                content = response.choices[0].message.content or ""
-                usage = {}
-                if hasattr(response, "usage"):
+                if response.status_code != 200:
+                    error_body = response.text[:500]
+                    last_error = f"HTTP {response.status_code}: {error_body}"
+                    logger.warning(last_error)
+                    # Don't retry on 4xx client errors (except 429 rate limit)
+                    if 400 <= response.status_code < 500 and response.status_code != 429:
+                        break
+                else:
+                    data = response.json()
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    usage_data = data.get("usage", {})
                     usage = {
-                        "prompt_tokens": getattr(response.usage, "prompt_tokens", 0),
-                        "completion_tokens": getattr(response.usage, "completion_tokens", 0),
+                        "prompt_tokens": usage_data.get("prompt_tokens", 0),
+                        "completion_tokens": usage_data.get("completion_tokens", 0),
                     }
 
-                logger.info(
-                    "LLM call success, tokens: prompt=%s completion=%s",
-                    usage.get("prompt_tokens", "?"),
-                    usage.get("completion_tokens", "?"),
-                )
+                    logger.info(
+                        "LLM call success, tokens: prompt=%s completion=%s",
+                        usage.get("prompt_tokens", "?"),
+                        usage.get("completion_tokens", "?"),
+                    )
 
-                return LLMResponse(
-                    content=content,
-                    model=self._full_model,
-                    usage=usage,
-                    success=True,
-                )
+                    return LLMResponse(
+                        content=content,
+                        model=self.model,
+                        usage=usage,
+                        success=True,
+                    )
 
-            except asyncio.TimeoutError:
+            except httpx.TimeoutException:
                 last_error = f"LLM call timed out after {self.timeout}s (attempt {attempt})"
+                logger.warning(last_error)
+            except httpx.HTTPError as e:
+                last_error = f"LLM call failed: {type(e).__name__}: {e} (attempt {attempt})"
                 logger.warning(last_error)
             except Exception as e:
                 last_error = f"LLM call failed: {type(e).__name__}: {e} (attempt {attempt})"
@@ -135,7 +192,7 @@ class LLMClient:
         logger.error("LLM call failed after %d attempts: %s", self.max_retries, last_error)
         return LLMResponse(
             content="",
-            model=self._full_model,
+            model=self.model,
             error=last_error,
             success=False,
         )

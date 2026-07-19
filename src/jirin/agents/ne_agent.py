@@ -106,10 +106,10 @@ class NEAgent(BaseAgent):
             if ne_data.get("cmdline"):
                 parts.append(f"Process: {ne_data['cmdline']}")
             if ne_data.get("pid"):
-                parts.append(
-                    f"PID: {ne_data['pid']}, TID: {ne_data.get('tid', 'N/A')}"
-                    f"{f', Thread: {ne_data[\"thread_name\"]}' if ne_data.get('thread_name') else ''}"
-                )
+                pid_str = f"PID: {ne_data['pid']}, TID: {ne_data.get('tid', 'N/A')}"
+                if ne_data.get('thread_name'):
+                    pid_str += f", Thread: {ne_data['thread_name']}"
+                parts.append(pid_str)
             if ne_data.get("abi"):
                 parts.append(f"ABI: {ne_data['abi']}")
 

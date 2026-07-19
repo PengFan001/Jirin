@@ -25,7 +25,7 @@ class BaseAgent(ABC):
     """Abstract base class for specialized analysis agents.
 
     Provides:
-    - LLM interaction via LiteLLM
+    - LLM interaction via httpx (OpenAI-compatible API)
     - Knowledge retrieval from knowledge base
     - Similar case retrieval for few-shot learning
     - Standard result construction

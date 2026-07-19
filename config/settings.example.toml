@@ -2,7 +2,7 @@
 # Copy this file to settings.toml and fill in your values
 
 [llm]
-# Provider: "openai", "anthropic", "ollama", etc.
+# Provider: "openai", "ollama", etc.
 # For Chinese LLMs (Qwen/DeepSeek/Kimi), use provider = "openai" with custom api_base
 provider = "openai"
 model = "gpt-4o"
@@ -15,11 +15,6 @@ max_tokens = 4096
 # provider = "openai"
 # model = "gpt-4o"
 # api_key = "sk-xxx"
-
-# --- Example: Anthropic (Claude) ---
-# provider = "anthropic"
-# model = "claude-sonnet-4-20250514"
-# api_key = "sk-ant-xxx"
 
 # --- Example: DeepSeek V4 Pro ---
 # provider = "openai"
@@ -49,7 +44,9 @@ model = "qwen2.5:14b"
 api_base = "http://localhost:11434"
 
 [embedding]
-# Provider: "local" (sentence-transformers) or "openai"
+# Embedding provider for vector search.
+# ChromaDB uses a built-in embedding function (onnxruntime-based, no extra config needed).
+# For OpenAI embeddings, uncomment the [embedding.openai] section below.
 provider = "local"
 model_name = "all-MiniLM-L6-v2"
 
@@ -67,14 +64,14 @@ similarity_threshold = 0.7
 
 [storage]
 # Path to persistent data
-data_dir = "data"
-cases_dir = "data/cases"
-memory_dir = "data/memory"
-vector_db_dir = "data/vector_db"
+data_dir = ".jirin"
+cases_dir = ".jirin/cases"
+memory_dir = ".jirin/memory"
+vector_db_dir = ".jirin/vector_db"
 
 [export]
 # Default export directory
-output_dir = "data/exports"
+output_dir = ".jirin/exports"
 
 [source]
 # Optional: path to local AOSP source tree for deep code search.

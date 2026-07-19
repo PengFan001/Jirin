@@ -119,7 +119,7 @@ class LogDirectoryScanner:
     - Suggest ADB commands for missing log files
     """
 
-    MEMORY_FILE = "data/log_structure_memory.json"
+    MEMORY_FILE = ".jirin/log_structure_memory.json"
 
     def __init__(self, memory_path: str | Path | None = None) -> None:
         self._memory_path = Path(memory_path) if memory_path else Path(self.MEMORY_FILE)

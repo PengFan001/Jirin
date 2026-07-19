@@ -125,7 +125,7 @@ async def _run_learning_pipeline(
 
         # Step 5: Save long-term memory insights
         storage_cfg = context.get_storage_config()
-        memory = MemoryManager(memory_dir=storage_cfg.get("memory_dir", "data/memory"))
+        memory = MemoryManager(memory_dir=storage_cfg.get("memory_dir", ".jirin/memory"))
         if learnings.get("is_common_pattern"):
             insight_text = (
                 f"Pattern: {learnings.get('root_cause_pattern', '')} | "

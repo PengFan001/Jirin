@@ -90,7 +90,7 @@
             <div class="card"><div class="icon">&#128165;</div><h4>NE 分析</h4><p>分析 Native Exception / Tombstone，解读信号类型、backtrace、内存访问错误</p></div>
             <div class="card"><div class="icon">&#129504;</div><h4>自学习</h4><p>从历史分析中学习模式，积累案例库，持续提升分析准确性</p></div>
             <div class="card"><div class="icon">&#128230;</div><h4>插件导出</h4><p>导出为 Qoder Skill / Cursor Rules / Codex AGENTS.md，可在多种 AI IDE 中使用</p></div>
-            <div class="card"><div class="icon">&#128736;</div><h4>多模型支持</h4><p>支持 OpenAI、Anthropic、Ollama 等多种 LLM 后端，灵活切换</p></div>
+            <div class="card"><div class="icon">&#128736;</div><h4>多模型支持</h4><p>支持 OpenAI、DeepSeek、通义千问、Kimi、Ollama 等多种 LLM 后端，灵活切换</p></div>
             <div class="card"><div class="icon">&#128193;</div><h4>多平台日志</h4><p>支持高通/MTK/展锐日志目录结构自动识别，支持目录学习记忆</p></div>
             <div class="card"><div class="icon">&#128196;</div><h4>灵活输出</h4><p>支持纯文本/Markdown/HTML 多种输出格式，MD 可直接导入飞书</p></div>
             <div class="card"><div class="icon">&#128260;</div><h4>MIXED 深度分析</h4><p>混合问题类型时自动进行跨类型因果关联分析，确定因果链和修复优先级</p></div>
@@ -163,10 +163,12 @@
         <div class="steps">
             <div class="step"><div class="step-content"><strong>环境要求</strong>Python 3.11 或更高版本<pre><code>python --version  # 确认版本 >= 3.11</code></pre></div></div>
             <div class="step"><div class="step-content"><strong>安装 Jirin</strong>在项目根目录执行安装<pre><code>cd Jirin
+# 国内用户建议使用清华镜像加速：
+# pip install -e . -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
 pip install -e .</code></pre><p>安装成功后，<code class="inline-code">jirin</code> 命令可在<strong>任意目录</strong>使用。</p></div></div>
             <div class="step"><div class="step-content"><strong>配置 LLM</strong>复制配置模板并填入 API Key<pre><code>cp config/settings.example.toml config/settings.toml
 # 编辑 settings.toml，填入你的 LLM API Key</code></pre>
-                <table><tr><th>Provider</th><th>配置</th><th>说明</th></tr><tr><td>OpenAI</td><td>provider = "openai"</td><td>需要 api_key</td></tr><tr><td>Anthropic</td><td>provider = "anthropic"</td><td>需要 api_key</td></tr><tr><td>DeepSeek</td><td>provider = "openai" + api_base</td><td>兼容 OpenAI 格式</td></tr><tr><td>通义千问</td><td>provider = "openai" + api_base</td><td>兼容 OpenAI 格式</td></tr><tr><td>Kimi K3</td><td>provider = "openai" + api_base</td><td>兼容 OpenAI 格式</td></tr><tr><td>Ollama</td><td>provider = "ollama"</td><td>本地模型，无需 key</td></tr></table>
+                <table><tr><th>Provider</th><th>配置</th><th>说明</th></tr><tr><td>OpenAI</td><td>provider = "openai"</td><td>需要 api_key</td></tr><tr><td>DeepSeek</td><td>provider = "openai" + api_base</td><td>兼容 OpenAI 格式</td></tr><tr><td>通义千问</td><td>provider = "openai" + api_base</td><td>兼容 OpenAI 格式</td></tr><tr><td>Kimi K3</td><td>provider = "openai" + api_base</td><td>兼容 OpenAI 格式</td></tr><tr><td>Ollama</td><td>provider = "ollama"</td><td>本地模型，无需 key</td></tr></table>
                 <p style="margin-top:8px">详细配置请参考下方 <a href="#llm-config" style="color:var(--primary)">LLM 接入指南</a> 章节。</p>
             </div></div>
         </div>
@@ -195,7 +197,7 @@ pip uninstall jirin -y
 # （可选）删除项目目录
 # rm -rf /path/to/Jirin  # Linux/Mac
 # Remove-Item -Recurse -Force Jirin  # Windows PowerShell</code></pre>
-        <p>卸载后，<code class="inline-code">jirin</code> 命令将不再可用。配置文件和数据文件（<code class="inline-code">data/</code> 目录）不会被自动删除，如需清理请手动删除。</p>
+        <p>卸载后，<code class="inline-code">jirin</code> 命令将不再可用。配置文件和运行时数据（<code class="inline-code">.jirin/</code> 目录，位于你运行命令时的工作目录下）不会被自动删除，如需清理请手动删除。</p>
     </div>
 </section>
 
@@ -203,7 +205,7 @@ pip uninstall jirin -y
 <section id="llm-config" style="background: white;">
     <div class="container">
         <h2>LLM 接入指南</h2>
-        <p>Jirin 通过 <a href="https://github.com/BerriAI/litellm" target="_blank" style="color:var(--primary)">LiteLLM</a> 统一调用各种 LLM 服务。所有支持 OpenAI 兼容 API 格式的模型都可以接入。</p>
+        <p>Jirin 通过 httpx 直接调用所有支持 OpenAI 兼容 API 格式的 LLM 服务。无需额外中间层，轻量高效。</p>
 
         <h3>配置方法</h3>
         <p>编辑 <code class="inline-code">config/settings.toml</code> 中的 <code class="inline-code">[llm]</code> 部分。核心字段：</p>
@@ -223,12 +225,6 @@ provider = "openai"
 model = "gpt-4o"
 api_key = "sk-xxx"
 # api_base 不需要填，默认使用 OpenAI 官方地址</code></pre>
-
-        <h4>Anthropic (Claude)</h4>
-        <pre><code>[llm]
-provider = "anthropic"
-model = "claude-sonnet-4-20250514"
-api_key = "sk-ant-xxx"</code></pre>
 
         <h4>DeepSeek V4 Pro</h4>
         <pre><code>[llm]
@@ -486,7 +482,7 @@ pip install -e .
 cp config/settings.example.toml config/settings.toml</code></pre>
 
         <div class="alert alert-info">
-            <strong>注意：</strong>每台机器都需要独立执行 <code class="inline-code">pip install -e .</code> 安装步骤，并各自配置 <code class="inline-code">config/settings.toml</code>（包含 API Key）。<code class="inline-code">data/</code> 目录中的学习数据（案例库、记忆）可以一并复制，也可以在新机器上从零开始积累。
+            <strong>注意：</strong>每台机器都需要独立执行 <code class="inline-code">pip install -e .</code> 安装步骤，并各自配置 <code class="inline-code">config/settings.toml</code>（包含 API Key）。<code class="inline-code">.jirin/</code> 目录中的学习数据（案例库、记忆）可以一并复制，也可以在新机器上从零开始积累。
         </div>
     </div>
 </section>

@@ -159,7 +159,7 @@
             <div class="arch-layer layer-infra">
                 <div class="arch-layer-title">基础设施层 (Infrastructure)</div>
                 <div class="arch-boxes">
-                    <div class="arch-box">LiteLLM<small>多模型统一接口</small></div>
+                    <div class="arch-box">httpx<small>OpenAI 兼容 API 直连</small></div>
                     <div class="arch-box">ChromaDB<small>向量存储</small></div>
                     <div class="arch-box">JSON Store<small>案例持久化</small></div>
                     <div class="arch-box">Exporter<small>Skill/Rules/Codex</small></div>
@@ -197,9 +197,9 @@
             <tr><th>层面</th><th>选型</th><th>理由</th></tr>
             <tr><td>语言</td><td>Python 3.11+</td><td>AI 生态最成熟，LangChain/LangGraph 等框架丰富</td></tr>
             <tr><td>Agent 框架</td><td>LangGraph</td><td>原生支持多 Agent 编排、并行执行、状态管理</td></tr>
-            <tr><td>LLM 抽象</td><td>LiteLLM</td><td>统一接口调用 100+ 模型，运行时按配置切换</td></tr>
+            <tr><td>LLM 接入</td><td>httpx</td><td>直接调用 OpenAI 兼容 API，轻量无依赖，支持 OpenAI/DeepSeek/Qwen/Kimi/Ollama</td></tr>
             <tr><td>向量存储</td><td>ChromaDB</td><td>轻量嵌入式，无需额外服务，适合本地 CLI</td></tr>
-            <tr><td>Embedding</td><td>sentence-transformers</td><td>本地向量化，无需网络依赖</td></tr>
+            <tr><td>Embedding</td><td>ChromaDB 内置</td><td>基于 onnxruntime 的默认嵌入函数，无需额外依赖</td></tr>
             <tr><td>CLI</td><td>Typer + Rich</td><td>现代 CLI 框架，输出美观</td></tr>
             <tr><td>配置</td><td>TOML</td><td>统一项目配置和运行时配置</td></tr>
         </table>
@@ -413,7 +413,7 @@
 │   │   └── logging_config.py   # 结构化日志配置
 │   └── cli/                    # CLI 入口
 │       └── main.py             # Typer 应用
-├── data/                       # 运行时数据
+├── .jirin/                     # 运行时数据（隐藏目录）
 └── tests/                      # 测试</code></pre>
 
         <h3>8.2 关键实现要点</h3>

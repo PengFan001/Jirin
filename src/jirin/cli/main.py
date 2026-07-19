@@ -226,7 +226,7 @@ def _output_result(result, export_format: str, output: Path | None) -> None:
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         ext = "md" if export_format == "md" else "html"
-        default_path = Path(f"data/reports/jirin_report_{timestamp}.{ext}")
+        default_path = Path(f".jirin/reports/jirin_report_{timestamp}.{ext}")
         saved_path = save_report(result, default_path, format=export_format)
         console.print(f"[green]Report saved to: {saved_path}[/green]")
     elif result.final_report:
@@ -331,7 +331,7 @@ def _check_config(config_path: Path) -> None:
         console.print(
             "[yellow]Warning: LLM API Key not configured.[/yellow]\n"
             "[yellow]Analysis requires an LLM. Configure one of:[/yellow]\n"
-            "  [bold]- OpenAI / Anthropic / DeepSeek / Qwen / Kimi[/bold] (need API Key)\n"
+            "  [bold]- OpenAI / DeepSeek / Qwen / Kimi[/bold] (need API Key)\n"
             "  [bold]- Ollama[/bold] (local model, no API Key needed)\n"
             "[dim]Run 'jirin config init' or edit config/settings.toml[/dim]"
         )

@@ -102,7 +102,7 @@ class ExecutionContext:
         if self._vector_store is None:
             storage_cfg = self.get_storage_config()
             self._vector_store = VectorStore(
-                persist_dir=storage_cfg.get("vector_db_dir", "data/vector_db"),
+                persist_dir=storage_cfg.get("vector_db_dir", ".jirin/vector_db"),
                 embedding_config=self.get_embedding_config(),
             )
         return self._vector_store
@@ -113,6 +113,6 @@ class ExecutionContext:
         if self._case_store is None:
             storage_cfg = self.get_storage_config()
             self._case_store = CaseStore(
-                cases_dir=storage_cfg.get("cases_dir", "data/cases")
+                cases_dir=storage_cfg.get("cases_dir", ".jirin/cases")
             )
         return self._case_store

@@ -19,6 +19,7 @@ env/
 *.swo
 
 # Project runtime data
+.jirin/
 data/
 config/settings.toml
 
