@@ -9,6 +9,7 @@ description = "AI Agent for Android stability issue analysis (JE/ANR/NE)"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Jirin Team" }]
+readme = "README.md"
 
 dependencies = [
     "langgraph>=0.2.0",
