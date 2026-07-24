@@ -19,6 +19,8 @@ from jirin.cli.commands.analyze import analyze_cmd
 from jirin.cli.commands.learn import learn_app
 from jirin.cli.commands.export import export_app
 from jirin.cli.commands.config import config_app
+from jirin.cli.commands.upgrade import upgrade_app
+from jirin.cli.commands.test_llm import test_app
 
 app = typer.Typer(
     name="jirin",
@@ -33,6 +35,8 @@ logger = logging.getLogger(__name__)
 app.add_typer(learn_app, name="learn", help="Manage learning and case knowledge")
 app.add_typer(export_app, name="export", help="Export agent as skill/plugin")
 app.add_typer(config_app, name="config", help="Manage configuration")
+app.add_typer(upgrade_app, name="upgrade", help="Upgrade Jirin to the latest version")
+app.add_typer(test_app, name="test", help="Test LLM API connection")
 
 
 @app.command()
@@ -43,10 +47,10 @@ def analyze(
         exists=True,
         readable=True,
     ),
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
     verbose: bool = typer.Option(
         False,
@@ -95,7 +99,7 @@ def analyze(
 
 def _analyze_file(
     log_file: Path,
-    config: Path,
+    config: Path | None,
     verbose: bool,
     export_format: str,
     output: Path | None,
@@ -132,7 +136,7 @@ def _analyze_file(
 
 def _analyze_directory(
     log_dir: Path,
-    config: Path,
+    config: Path | None,
     verbose: bool,
     export_format: str,
     output: Path | None,
@@ -219,7 +223,7 @@ def _output_result(result, export_format: str, output: Path | None) -> None:
             fmt = "md"
         else:
             fmt = "text"
-        saved_path = save_report(result, output, format=fmt)
+        saved_path = save_report(result, output, fmt=fmt)
         console.print(f"[green]Report saved to: {saved_path}[/green]")
     elif export_format in ("md", "html"):
         # --export md/html without --output: save to default path
@@ -227,7 +231,7 @@ def _output_result(result, export_format: str, output: Path | None) -> None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         ext = "md" if export_format == "md" else "html"
         default_path = Path(f".jirin/reports/jirin_report_{timestamp}.{ext}")
-        saved_path = save_report(result, default_path, format=export_format)
+        saved_path = save_report(result, default_path, fmt=export_format)
         console.print(f"[green]Report saved to: {saved_path}[/green]")
     elif result.final_report:
         # Default: formatted text output to terminal
@@ -243,7 +247,7 @@ def _output_result(result, export_format: str, output: Path | None) -> None:
             console.print(f"  [dim]- {error}[/dim]")
 
 
-def _collect_feedback(result, config: Path) -> None:
+def _collect_feedback(result, config: Path | None) -> None:
     """Interactively collect user feedback on analysis results."""
     if not result.final_report:
         return
@@ -273,7 +277,7 @@ def _collect_feedback(result, config: Path) -> None:
 
 
 def _save_feedback(
-    result, config: Path, feedback_type: str, content: str
+    result, config: Path | None, feedback_type: str, content: str
 ) -> None:
     """Save feedback to case store."""
     try:
@@ -308,7 +312,7 @@ def _save_feedback(
         logger.debug("Feedback save failed (non-fatal): %s", e)
 
 
-def _check_config(config_path: Path) -> None:
+def _check_config(config_path: Path | None) -> None:
     """Check configuration and print friendly warnings if needed."""
     from jirin.core.context import ExecutionContext
 
@@ -316,7 +320,8 @@ def _check_config(config_path: Path) -> None:
 
     if ctx.config_missing:
         console.print(
-            f"[yellow]Warning: Config file not found: {ctx.config_missing_path}[/yellow]\n"
+            f"[yellow]Warning: No config file found. Searched locations:[/yellow]\n"
+            f"  [dim]- {ctx.config_missing_path}[/dim]\n"
             f"[yellow]Using default settings. To configure LLM, run:[/yellow]\n"
             f"  [bold]jirin config init[/bold]\n"
             f"[dim]See docs/jirin_user_guide.html for LLM configuration guide.[/dim]"
@@ -337,7 +342,7 @@ def _check_config(config_path: Path) -> None:
         )
 
 
-@app.command()
+@app.command(name="learn-structure")
 def learn_structure(
     name: str = typer.Argument(..., help="Name for this directory structure"),
     log_dir: Path = typer.Argument(..., help="Path to log directory to learn", exists=True),

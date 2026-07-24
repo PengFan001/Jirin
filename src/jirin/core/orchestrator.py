@@ -6,7 +6,6 @@ which specialized agents should handle the analysis.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
@@ -67,7 +66,7 @@ class OrchestratorAgent:
     def __init__(self, context: ExecutionContext) -> None:
         self.context = context
 
-    def classify_and_route(self, state: AnalysisState) -> AnalysisState:
+    async def classify_and_route(self, state: AnalysisState) -> AnalysisState:
         """Classify the issue type and prepare routing information.
 
         Args:
@@ -83,7 +82,7 @@ class OrchestratorAgent:
 
         # Phase 2: LLM classification for ambiguous or empty results
         if not detected or len(detected) > 1:
-            llm_detected = self._llm_classify(log)
+            llm_detected = await self._llm_classify(log)
             if llm_detected:
                 detected = llm_detected
 
@@ -127,7 +126,7 @@ class OrchestratorAgent:
 
         return detected
 
-    def _llm_classify(self, log: str) -> list[IssueType]:
+    async def _llm_classify(self, log: str) -> list[IssueType]:
         """Use LLM to classify ambiguous logs."""
         llm_config = self.context.get_llm_config()
         if not llm_config.get("api_key") and llm_config.get("provider") != "ollama":
@@ -153,9 +152,8 @@ Log excerpt:
 JSON response:"""
 
         client = LLMClient(llm_config, max_retries=1, timeout=15.0)
-        response = client.complete_sync(
+        response = await client.complete(
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
             max_tokens=100,
         )
 

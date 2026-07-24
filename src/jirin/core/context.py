@@ -19,6 +19,33 @@ from jirin.knowledge.vector_store import VectorStore
 from jirin.knowledge.case_store import CaseStore
 
 
+def find_config_file(user_path: str | Path | None = None) -> Path | None:
+    """Find config file with fallback logic.
+
+    Priority:
+    1. User-specified path (if exists)
+    2. Current working directory: config/settings.toml
+    3. Package installation directory: config/settings.toml
+    4. None (use defaults)
+    """
+    # 1. User-specified path
+    if user_path:
+        p = Path(user_path)
+        if p.exists():
+            return p
+    # 2. Current working directory
+    cwd_config = Path.cwd() / "config" / "settings.toml"
+    if cwd_config.exists():
+        return cwd_config
+    # 3. Package installation directory
+    # __file__ is src/jirin/core/context.py -> go up 4 levels to project root
+    pkg_root = Path(__file__).resolve().parent.parent.parent.parent
+    pkg_config = pkg_root / "config" / "settings.toml"
+    if pkg_config.exists():
+        return pkg_config
+    return None
+
+
 class ExecutionContext:
     """Runtime context shared across all agents.
 
@@ -33,8 +60,16 @@ class ExecutionContext:
         self._vector_store: VectorStore | None = None
         self._case_store: CaseStore | None = None
 
-        if config_path:
-            self.load_config(config_path)
+        # Use find_config_file for auto-discovery if no path specified
+        resolved_path = find_config_file(config_path)
+        if resolved_path:
+            self.load_config(resolved_path)
+        else:
+            # No config found - record what was searched
+            if config_path:
+                self._config_missing = str(config_path)
+            else:
+                self._config_missing = "(auto-discovery: checked CWD and package directory)"
 
     @property
     def config_missing(self) -> bool:
@@ -82,6 +117,14 @@ class ExecutionContext:
     def get_source_config(self) -> dict[str, Any]:
         """Get AOSP source code configuration."""
         return self._config.get("source", {})
+
+    def get_output_config(self) -> dict[str, Any]:
+        """Get output configuration (language, format, etc.)."""
+        return self._config.get("output", {})
+
+    def get_output_language(self) -> str:
+        """Get output language setting (e.g., 'zh-CN', 'en-US')."""
+        return self.get_output_config().get("language", "zh-CN")
 
     @property
     def knowledge_manager(self) -> KnowledgeManager:

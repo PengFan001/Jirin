@@ -10,7 +10,6 @@ Supports all OpenAI-compatible providers: OpenAI, DeepSeek, Qwen, Kimi, Ollama, 
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -59,7 +58,7 @@ class LLMClient:
         self,
         llm_config: dict[str, Any],
         max_retries: int = 3,
-        timeout: float = 60.0,
+        timeout: float | None = None,
     ) -> None:
         self.provider = llm_config.get("provider", "openai")
         self.model = llm_config.get("model", "gpt-4o")
@@ -68,7 +67,8 @@ class LLMClient:
         self.temperature = llm_config.get("temperature", 0.1)
         self.max_tokens = llm_config.get("max_tokens", 4096)
         self.max_retries = max_retries
-        self.timeout = timeout
+        # Use provided timeout, or config value, or default (120s)
+        self.timeout = timeout if timeout is not None else llm_config.get("timeout", 120.0)
 
     def _resolve_api_base(self, llm_config: dict[str, Any]) -> str:
         """Resolve the API base URL from config or provider defaults."""
@@ -89,6 +89,9 @@ class LLMClient:
     def _completions_url(self) -> str:
         """Get the chat completions endpoint URL."""
         base = self.api_base
+        # If already contains /chat/completions, return as-is
+        if "/chat/completions" in base:
+            return base
         # Ensure the URL ends with /v1 or similar, then append /chat/completions
         if base.endswith("/v1"):
             return f"{base}/chat/completions"
@@ -152,7 +155,14 @@ class LLMClient:
                         break
                 else:
                     data = response.json()
-                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    message = data.get("choices", [{}])[0].get("message", {})
+                    # For reasoning models (like kimi-k2.6, o1), content might be empty
+                    # and the actual response is in reasoning_content
+                    content = message.get("content", "")
+                    reasoning = message.get("reasoning_content", "")
+                    # Use reasoning_content if content is empty
+                    if not content and reasoning:
+                        content = reasoning
                     usage_data = data.get("usage", {})
                     usage = {
                         "prompt_tokens": usage_data.get("prompt_tokens", 0),
@@ -186,6 +196,7 @@ class LLMClient:
             if attempt < self.max_retries:
                 wait_time = 2 ** attempt
                 logger.debug("Retrying in %ds...", wait_time)
+                import asyncio
                 await asyncio.sleep(wait_time)
 
         # All retries exhausted
@@ -196,21 +207,3 @@ class LLMClient:
             error=last_error,
             success=False,
         )
-
-    def complete_sync(
-        self,
-        messages: list[dict[str, str]],
-        temperature: float | None = None,
-        max_tokens: int | None = None,
-    ) -> LLMResponse:
-        """Synchronous wrapper for complete().
-
-        Args:
-            messages: Chat messages list.
-            temperature: Override temperature.
-            max_tokens: Override max tokens.
-
-        Returns:
-            LLMResponse with content or error.
-        """
-        return asyncio.run(self.complete(messages, temperature, max_tokens))

@@ -27,7 +27,7 @@ class CaseStore:
     - User feedback (if any)
     """
 
-    def __init__(self, cases_dir: str = "data/cases") -> None:
+    def __init__(self, cases_dir: str = ".jirin/cases") -> None:
         self._cases_dir = Path(cases_dir)
         self._cases_dir.mkdir(parents=True, exist_ok=True)
 

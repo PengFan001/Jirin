@@ -7,7 +7,6 @@ Supports true parallel fan-out via LangGraph Send API.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Annotated, Any, TypedDict
 
@@ -59,6 +58,23 @@ AGENT_NODE_MAP = {
     IssueType.ANR: "anr_agent",
     IssueType.NE: "ne_agent",
 }
+
+# String-to-enum lookup for defensive handling of serialized state
+_ISSUE_TYPE_LOOKUP = {t.value: t for t in IssueType}
+
+
+def _normalize_issue_type(value: Any) -> IssueType:
+    """Convert a value to IssueType, handling both enum and string forms.
+
+    LangGraph may serialize enums to their string values during state
+    transitions. This helper ensures consistent comparison regardless
+    of whether the value is an IssueType enum or its string value.
+    """
+    if isinstance(value, IssueType):
+        return value
+    if isinstance(value, str):
+        return _ISSUE_TYPE_LOOKUP.get(value.lower(), IssueType.UNKNOWN)
+    return IssueType.UNKNOWN
 
 
 class AnalysisGraph:
@@ -131,11 +147,11 @@ class AnalysisGraph:
 
         return graph.compile()
 
-    def _orchestrator_node(self, state: dict[str, Any]) -> dict[str, Any]:
+    async def _orchestrator_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Orchestrator node: classify and decide routing."""
         logger.info("Orchestrator: classifying issue type")
         analysis_state = AnalysisState(**state)
-        analysis_state = self.orchestrator.classify_and_route(analysis_state)
+        analysis_state = await self.orchestrator.classify_and_route(analysis_state)
         logger.info(
             "Orchestrator: detected types=%s, primary=%s",
             [t.value for t in analysis_state.detected_types],
@@ -151,7 +167,8 @@ class AnalysisGraph:
         If no actionable types detected, routes directly to summary.
         """
         detected = state.get("detected_types", [])
-        type_set = set(detected)
+        # Normalize: values may be IssueType enums or serialized strings
+        type_set = {_normalize_issue_type(t) for t in detected}
 
         if not type_set or type_set == {IssueType.UNKNOWN}:
             logger.info("No actionable issue types detected, routing to summary")
@@ -174,42 +191,42 @@ class AnalysisGraph:
             for issue_type in agents_to_run
         ]
 
-    def _je_agent_node(self, state: dict[str, Any]) -> dict[str, Any]:
-        """JE analysis node (sync for thread pool execution)."""
+    async def _je_agent_node(self, state: dict[str, Any]) -> dict[str, Any]:
+        """JE analysis node."""
         logger.info("JE Agent: starting analysis")
         analysis_state = AnalysisState(**state)
-        result = asyncio.run(self.je_agent.analyze(analysis_state))
+        result = await self.je_agent.analyze(analysis_state)
         analysis_state.add_result(result)
         logger.info("JE Agent: analysis complete, confidence=%.2f", result.confidence)
         return analysis_state.model_dump()
 
-    def _anr_agent_node(self, state: dict[str, Any]) -> dict[str, Any]:
-        """ANR analysis node (sync for thread pool execution)."""
+    async def _anr_agent_node(self, state: dict[str, Any]) -> dict[str, Any]:
+        """ANR analysis node."""
         logger.info("ANR Agent: starting analysis")
         analysis_state = AnalysisState(**state)
-        result = asyncio.run(self.anr_agent.analyze(analysis_state))
+        result = await self.anr_agent.analyze(analysis_state)
         analysis_state.add_result(result)
         logger.info("ANR Agent: analysis complete, confidence=%.2f", result.confidence)
         return analysis_state.model_dump()
 
-    def _ne_agent_node(self, state: dict[str, Any]) -> dict[str, Any]:
-        """NE analysis node (sync for thread pool execution)."""
+    async def _ne_agent_node(self, state: dict[str, Any]) -> dict[str, Any]:
+        """NE analysis node."""
         logger.info("NE Agent: starting analysis")
         analysis_state = AnalysisState(**state)
-        result = asyncio.run(self.ne_agent.analyze(analysis_state))
+        result = await self.ne_agent.analyze(analysis_state)
         analysis_state.add_result(result)
         logger.info("NE Agent: analysis complete, confidence=%.2f", result.confidence)
         return analysis_state.model_dump()
 
     def _route_to_correlator_or_summary(self, state: dict[str, Any]) -> str:
         """Route to correlator if MIXED type, otherwise to summary."""
-        primary = state.get("primary_type")
+        primary = _normalize_issue_type(state.get("primary_type", IssueType.UNKNOWN))
         if primary == IssueType.MIXED:
             logger.info("MIXED type detected, routing to correlator")
             return "correlator"
         return "summary"
 
-    def _correlator_node(self, state: dict[str, Any]) -> dict[str, Any]:
+    async def _correlator_node(self, state: dict[str, Any]) -> dict[str, Any]:
         """Correlator node: analyze causal relationships between multiple issue types.
 
         Only activated when primary_type == MIXED and multiple agent results exist.
@@ -231,12 +248,9 @@ class AnalysisGraph:
             return analysis_state.model_dump()
 
         client = LLMClient(llm_config, max_retries=2, timeout=30.0)
-        response = asyncio.run(
-            client.complete(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,
-                max_tokens=1000,
-            )
+        response = await client.complete(
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,
         )
 
         if response.success:
@@ -278,11 +292,11 @@ Analyze the causal relationships and respond as JSON:
 
         return "\n".join(parts)
 
-    def _summary_node(self, state: dict[str, Any]) -> dict[str, Any]:
-        """Summary node: synthesize final report (sync for thread pool execution)."""
+    async def _summary_node(self, state: dict[str, Any]) -> dict[str, Any]:
+        """Summary node: synthesize final report."""
         logger.info("Summary Agent: synthesizing final report")
         analysis_state = AnalysisState(**state)
-        final_state = asyncio.run(self.summary_agent.summarize(analysis_state))
+        final_state = await self.summary_agent.summarize(analysis_state)
         logger.info("Summary Agent: report generated")
         return final_state.model_dump()
 

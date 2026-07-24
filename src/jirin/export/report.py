@@ -250,23 +250,23 @@ def format_html(state: AnalysisState) -> str:
 def save_report(
     state: AnalysisState,
     output_path: Path,
-    format: str = "md",
+    fmt: str = "md",
 ) -> Path:
     """Save analysis report to file.
 
     Args:
         state: Completed analysis state.
         output_path: Output file path.
-        format: Output format ("text", "md", "html").
+        fmt: Output format ("text", "md", "html").
 
     Returns:
         Path to the saved file.
     """
-    if format == "md":
+    if fmt == "md":
         content = format_markdown(state)
         if not output_path.suffix:
             output_path = output_path.with_suffix(".md")
-    elif format == "html":
+    elif fmt == "html":
         content = format_html(state)
         if not output_path.suffix:
             output_path = output_path.with_suffix(".html")

@@ -23,7 +23,7 @@ class VectorStore:
 
     def __init__(
         self,
-        persist_dir: str = "data/vector_db",
+        persist_dir: str = ".jirin/vector_db",
         embedding_config: dict[str, Any] | None = None,
     ) -> None:
         self._persist_dir = Path(persist_dir)

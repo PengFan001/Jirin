@@ -21,10 +21,10 @@ learn_app = typer.Typer(no_args_is_help=True)
 
 @learn_app.command("stats")
 def stats(
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
 ) -> None:
     """Show knowledge base statistics."""
@@ -49,10 +49,10 @@ def stats(
 
 @learn_app.command("list")
 def list_cases(
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
     issue_type: str = typer.Option(
         None,
@@ -92,10 +92,10 @@ def list_cases(
 def feedback(
     case_id: str = typer.Argument(..., help="Case ID to add feedback to"),
     correction: str = typer.Option(..., "--correction", "-r", help="Correction text"),
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
 ) -> None:
     """Add feedback/correction to a case."""

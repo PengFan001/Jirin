@@ -18,14 +18,14 @@ export_app = typer.Typer(no_args_is_help=True)
 @export_app.command("qoder")
 def export_qoder(
     output_dir: Path = typer.Option(
-        Path("data/exports/qoder_skill"),
+        Path(".jirin/exports/qoder_skill"),
         "--output", "-o",
         help="Output directory for the skill",
     ),
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
 ) -> None:
     """Export as Qoder Skill."""
@@ -39,14 +39,14 @@ def export_qoder(
 @export_app.command("cursor")
 def export_cursor(
     output_dir: Path = typer.Option(
-        Path("data/exports/cursor_rules"),
+        Path(".jirin/exports/cursor_rules"),
         "--output", "-o",
         help="Output directory for cursor rules",
     ),
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
 ) -> None:
     """Export as Cursor Rules."""
@@ -60,14 +60,14 @@ def export_cursor(
 @export_app.command("generic")
 def export_generic(
     output_dir: Path = typer.Option(
-        Path("data/exports/generic"),
+        Path(".jirin/exports/generic"),
         "--output", "-o",
         help="Output directory",
     ),
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
 ) -> None:
     """Export as generic Markdown documentation."""
@@ -81,14 +81,14 @@ def export_generic(
 @export_app.command("codex")
 def export_codex(
     output_dir: Path = typer.Option(
-        Path("data/exports/codex"),
+        Path(".jirin/exports/codex"),
         "--output", "-o",
         help="Output directory for AGENTS.md",
     ),
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
 ) -> None:
     """Export as Codex AGENTS.md file."""

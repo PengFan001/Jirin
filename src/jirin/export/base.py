@@ -30,8 +30,12 @@ class BaseExporter:
         Returns:
             Dictionary mapping relative path to content.
         """
-        km = self.context.knowledge_manager
-        static_dir = Path(km._static_dir) if hasattr(km, '_static_dir') else Path("src/jirin/knowledge/static")
+        # Use the configured static_dir from knowledge config
+        static_dir = Path(
+            self.context.get_knowledge_config().get(
+                "static_dir", "src/jirin/knowledge/static"
+            )
+        )
 
         docs = {}
         if static_dir.exists():

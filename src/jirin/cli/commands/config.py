@@ -16,6 +16,8 @@ if sys.version_info >= (3, 12):
 else:
     import tomli as tomllib
 
+from jirin.core.context import find_config_file
+
 console = Console()
 
 config_app = typer.Typer(no_args_is_help=True)
@@ -23,21 +25,24 @@ config_app = typer.Typer(no_args_is_help=True)
 
 @config_app.command("show")
 def show_config(
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
 ) -> None:
     """Show current configuration."""
-    if not config.exists():
-        console.print(f"[red]Config file not found: {config}[/red]")
+    resolved = find_config_file(config)
+    if not resolved:
+        console.print("[red]Config file not found.[/red]")
+        console.print("[yellow]Searched: CWD and package directory.[/yellow]")
+        console.print("[dim]Run 'jirin config init' to create one.[/dim]")
         raise typer.Exit(1)
 
-    with open(config, "rb") as f:
+    with open(resolved, "rb") as f:
         data = tomllib.load(f)
 
-    console.print("[bold]Current Configuration:[/bold]\n")
+    console.print(f"[bold]Current Configuration[/bold] [dim]({resolved})[/dim]\n")
     _print_dict(data)
 
 
@@ -72,20 +77,22 @@ def init_config(
 def set_config(
     key: str = typer.Argument(..., help="Config key (e.g., llm.model)"),
     value: str = typer.Argument(..., help="Value to set"),
-    config: Path = typer.Option(
-        Path("config/settings.toml"),
+    config: Path | None = typer.Option(
+        None,
         "--config", "-c",
-        help="Path to configuration file",
+        help="Path to configuration file (auto-discovers if not specified)",
     ),
 ) -> None:
     """Set a configuration value."""
     import tomli_w
 
-    if not config.exists():
-        console.print(f"[red]Config file not found: {config}[/red]")
+    resolved = find_config_file(config)
+    if not resolved:
+        console.print("[red]Config file not found.[/red]")
+        console.print("[dim]Run 'jirin config init' to create one.[/dim]")
         raise typer.Exit(1)
 
-    with open(config, "rb") as f:
+    with open(resolved, "rb") as f:
         data = tomllib.load(f)
 
     # Set value using dot notation
@@ -97,7 +104,7 @@ def set_config(
         d = d[k]
     d[keys[-1]] = value
 
-    with open(config, "wb") as f:
+    with open(resolved, "wb") as f:
         tomli_w.dump(data, f)
 
     console.print(f"[green]Set {key} = {value}[/green]")

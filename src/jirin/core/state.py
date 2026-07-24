@@ -8,7 +8,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class IssueType(str, Enum):
@@ -34,6 +34,16 @@ class AgentResult(BaseModel):
     suggestions: list[str] = Field(default_factory=list, description="Fix suggestions")
     related_cases: list[str] = Field(default_factory=list, description="Related historical cases")
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("analysis_detail", "root_cause", "responsible_party", mode="before")
+    @classmethod
+    def convert_list_to_str(cls, v: Any) -> str:
+        """Convert list values to string (some LLMs return lists instead of strings)."""
+        if isinstance(v, list):
+            return "\n".join(str(item) for item in v)
+        if v is None:
+            return ""
+        return str(v) if v else ""
 
 
 class AnalysisState(BaseModel):

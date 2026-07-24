@@ -7,6 +7,7 @@ corrections, reinforced patterns, and learned insights.
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,7 @@ class MemoryManager:
     - Insights: General learnings from analysis experience
     """
 
-    def __init__(self, memory_dir: str = "data/memory") -> None:
+    def __init__(self, memory_dir: str = ".jirin/memory") -> None:
         self._memory_dir = Path(memory_dir)
         self._memory_dir.mkdir(parents=True, exist_ok=True)
         self._corrections_file = self._memory_dir / "corrections.json"
@@ -46,7 +47,7 @@ class MemoryManager:
             Memory ID.
         """
         corrections = self._load_corrections()
-        memory_id = f"corr_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        memory_id = f"corr_{uuid.uuid4().hex[:12]}"
 
         corrections.append({
             "id": memory_id,
@@ -77,7 +78,7 @@ class MemoryManager:
             Memory ID.
         """
         insights = self._load_insights()
-        memory_id = f"ins_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        memory_id = f"ins_{uuid.uuid4().hex[:12]}"
 
         insights.append({
             "id": memory_id,

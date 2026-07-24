@@ -9,6 +9,7 @@ from __future__ import annotations
 from jirin.core.state import AnalysisState
 from jirin.core.context import ExecutionContext
 from jirin.core.llm_client import LLMClient
+from jirin.agents.base import LANGUAGE_INSTRUCTIONS
 
 
 SUMMARY_SYSTEM_PROMPT = """You are an Android stability analysis report generator. Your job is to synthesize analysis results from specialized agents into a clear, actionable report.
@@ -64,12 +65,18 @@ class SummaryAgent:
         llm_config = self.context.get_llm_config()
         client = LLMClient(llm_config)
 
+        # Append language instruction if configured
+        system_prompt = SUMMARY_SYSTEM_PROMPT
+        language = self.context.get_output_language()
+        lang_instruction = LANGUAGE_INSTRUCTIONS.get(language, "")
+        if lang_instruction:
+            system_prompt = system_prompt + lang_instruction
+
         response = await client.complete(
             messages=[
-                {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.2,
         )
 
         if response.success:

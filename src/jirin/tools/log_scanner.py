@@ -16,6 +16,19 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _is_stability_log(filename: str) -> bool:
+    """Check if filename suggests stability-related content.
+
+    Used as a fallback to identify relevant files when pattern matching fails.
+    """
+    keywords = [
+        "tombstone", "anr", "crash", "dropbox", "bugreport",
+        "cpuinfo", "meminfo", "gpu", "trace", "stack",
+        "dump", "fatal", "exception", "error",
+    ]
+    return any(kw in filename.lower() for kw in keywords)
+
+
 @dataclass
 class LogFileMapping:
     """Maps a logical log type to a physical file path."""
@@ -312,12 +325,16 @@ class LogDirectoryScanner:
     ) -> PlatformLogStructure:
         """Build a generic structure for unknown directories."""
         log_files = []
-        # Try to find common log files
+        # Expanded common log patterns for broader matching
         common_patterns = [
-            ("main_log", ["logcat*.txt", "*.log"]),
+            ("main_log", ["logcat*.txt", "*.log", "log.txt", "main_log*", "log_*"]),
             ("tombstone", ["tombstone*", "tombstones/*"]),
-            ("anr_trace", ["*anr*", "*traces*"]),
-            ("kernel_log", ["kmsg*", "dmesg*", "kernel*"]),
+            ("anr_trace", ["*anr*", "*traces*", "ANR*", "anr_*", "*.trace"]),
+            ("kernel_log", ["kmsg*", "dmesg*", "kernel*", "dmesg.txt"]),
+            ("event_log", ["events*", "event.log", "event_log*"]),
+            ("dump", ["*.dump", "*dump*", "dropbox*"]),
+            ("memory", ["*.hprof", "*meminfo*", "*memory*"]),
+            ("cpu_info", ["*cpuinfo*", "*cpu*"]),
         ]
 
         for log_type, patterns in common_patterns:
@@ -330,6 +347,31 @@ class LogDirectoryScanner:
                             file_path=match,
                             description="Generic detection",
                         ))
+
+        # Fallback: if no patterns matched, include all relevant file types
+        if not log_files:
+            relevant_extensions = {
+                ".txt", ".log",           # Text logs
+                ".trace", ".traces",      # Trace files
+                ".dump",                  # Dump files
+                ".hprof",                 # Heap dumps
+                ".json",                  # Structured logs (bugreport)
+                ".gz", ".zip",            # Compressed logs
+                "",                        # Extensionless files (tombstone_XX, etc.)
+            }
+            for f in sorted(log_dir.rglob("*")):
+                if f.is_file():
+                    ext = f.suffix.lower()
+                    name = f.name.lower()
+                    # Include relevant files by extension or filename
+                    if ext in relevant_extensions or _is_stability_log(name):
+                        log_files.append(LogFileMapping(
+                            log_type="unknown_log",
+                            file_path=f,
+                            description="Auto-detected log file",
+                        ))
+                        if len(log_files) >= 30:  # Limit to avoid overwhelming
+                            break
 
         return PlatformLogStructure(
             platform_name="unknown",

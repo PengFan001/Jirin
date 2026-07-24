@@ -20,6 +20,15 @@ from jirin.tools.search.code_search import CodeSearch
 
 logger = logging.getLogger(__name__)
 
+# Language instructions to append to system prompts
+LANGUAGE_INSTRUCTIONS: dict[str, str] = {
+    "zh-CN": "\n\nIMPORTANT: Please provide your ENTIRE response in Chinese (Simplified, 简体中文). "
+             "All analysis, explanations, and suggestions must be in Chinese.",
+    "en-US": "",  # Default, no extra instruction needed
+    "ja-JP": "\n\nIMPORTANT: Please provide your ENTIRE response in Japanese (日本語). "
+             "All analysis, explanations, and suggestions must be in Japanese.",
+}
+
 
 class BaseAgent(ABC):
     """Abstract base class for specialized analysis agents.
@@ -105,6 +114,12 @@ class BaseAgent(ABC):
         """
         llm_config = self.context.get_llm_config()
         client = LLMClient(llm_config)
+
+        # Append language instruction if configured
+        language = self.context.get_output_language()
+        lang_instruction = LANGUAGE_INSTRUCTIONS.get(language, "")
+        if lang_instruction:
+            system_prompt = system_prompt + lang_instruction
 
         response = await client.complete(
             messages=[
@@ -225,10 +240,11 @@ class BaseAgent(ABC):
             if json_block:
                 json_match = json_block.group(1)
             else:
-                # Try to find raw JSON object
-                json_block = re.search(r"\{.*\}", response, re.DOTALL)
-                if json_block:
-                    json_match = json_block.group(0)
+                # Try to find raw JSON object by matching outermost braces
+                start = response.find("{")
+                end = response.rfind("}")
+                if start != -1 and end > start:
+                    json_match = response[start:end + 1]
 
             if json_match:
                 data = json.loads(json_match)

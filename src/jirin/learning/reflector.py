@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from typing import Any
 
-from jirin.core.state import AnalysisState, AgentResult
+from jirin.core.state import AnalysisState
 from jirin.core.context import ExecutionContext
 from jirin.core.llm_client import LLMClient
 
@@ -107,7 +106,6 @@ class Reflector:
             messages=[
                 {"role": "user", "content": REFLECT_PROMPT.format(analysis=analysis_text)},
             ],
-            temperature=0.2,
             max_tokens=500,
         )
 
@@ -120,9 +118,11 @@ class Reflector:
     def _parse_learnings(self, content: str) -> dict[str, Any]:
         """Parse LLM response into learnings dict."""
         try:
-            json_match = re.search(r"\{.*\}", content, re.DOTALL)
-            if json_match:
-                return json.loads(json_match.group(0))
+            # Match outermost braces to handle nested JSON
+            start = content.find("{")
+            end = content.rfind("}")
+            if start != -1 and end > start:
+                return json.loads(content[start:end + 1])
         except (json.JSONDecodeError, ValueError):
             pass
 

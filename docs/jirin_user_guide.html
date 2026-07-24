@@ -61,7 +61,7 @@
     <div class="container">
         <h1>Jirin</h1>
         <p>Android 稳定性问题分析 AI Agent</p>
-        <span class="badge">v0.4.0 | JE / ANR / NE 分析 | MIXED 关联 | 用户反馈 | 多平台支持</span>
+        <span class="badge">v0.5.0 | JE / ANR / NE 分析 | MIXED 关联 | 用户反馈 | 多平台支持 | 配置自动发现</span>
     </div>
 </header>
 <nav>
@@ -95,6 +95,7 @@
             <div class="card"><div class="icon">&#128196;</div><h4>灵活输出</h4><p>支持纯文本/Markdown/HTML 多种输出格式，MD 可直接导入飞书</p></div>
             <div class="card"><div class="icon">&#128260;</div><h4>MIXED 深度分析</h4><p>混合问题类型时自动进行跨类型因果关联分析，确定因果链和修复优先级</p></div>
             <div class="card"><div class="icon">&#128172;</div><h4>用户反馈闭环</h4><p>分析后收集反馈，存入案例库，持续改进后续分析质量</p></div>
+            <div class="card"><div class="icon">&#128269;</div><h4>配置自动发现</h4><p>自动搜索当前目录和安装目录的配置文件，无需每次指定配置路径</p></div>
             <div class="card"><div class="icon">&#128218;</div><h4>AOSP 源码引用</h4><p>内置 30+ 框架组件路径映射，分析时自动引用 Android 源码关键路径</p></div>
         </div>
     </div>
@@ -215,6 +216,8 @@ pip uninstall jirin -y
             <tr><td><code class="inline-code">model</code></td><td>模型名称</td><td>"deepseek-chat"</td></tr>
             <tr><td><code class="inline-code">api_key</code></td><td>API 密钥</td><td>"sk-xxx"</td></tr>
             <tr><td><code class="inline-code">api_base</code></td><td>API 地址（非 OpenAI 官方地址时需要）</td><td>"https://api.deepseek.com/v1"</td></tr>
+            <tr><td><code class="inline-code">timeout</code></td><td>单次请求超时秒数（默认 120）</td><td>180</td></tr>
+            <tr><td><code class="inline-code">temperature</code></td><td>LLM 温度参数</td><td>1（推理模型）</td></tr>
         </table>
 
         <h3>各模型接入配置</h3>
@@ -265,10 +268,15 @@ api_base = "http://localhost:11434"</code></pre>
 
         <h3>配置验证</h3>
         <p>配置完成后，运行以下命令验证：</p>
-        <pre><code># 准备一个简单的测试日志文件
-echo "FATAL EXCEPTION: java.lang.NullPointerException" > test.log
+        <pre><code># 方式一：测试 LLM 连接（推荐，快速验证）
+jirin test connection
 
-# 运行分析，如果成功说明 LLM 配置正确
+# 方式二：查看可用模型列表
+jirin test models
+
+# 方式三：用实际日志测试分析
+# 准备一个简单的测试日志文件
+echo "FATAL EXCEPTION: java.lang.NullPointerException" > test.log
 jirin analyze test.log --verbose</code></pre>
         <p>如果配置有误，Jirin 会在启动时给出友好提示，告诉你哪个配置项需要检查。</p>
     </div>
@@ -314,7 +322,7 @@ jirin analyze crash.log --no-feedback</code></pre>
         <table>
             <tr><th>参数</th><th>说明</th><th>是否必须</th></tr>
             <tr><td><code class="inline-code">&lt;log_path&gt;</code></td><td>日志文件路径或日志目录路径</td><td>必须</td></tr>
-            <tr><td><code class="inline-code">--config, -c</code></td><td>配置文件路径（默认 config/settings.toml）</td><td>可选</td></tr>
+            <tr><td><code class="inline-code">--config, -c</code></td><td>配置文件路径（可选，自动发现）</td><td>可选</td></tr>
             <tr><td><code class="inline-code">--verbose, -v</code></td><td>显示详细分析过程</td><td>可选</td></tr>
             <tr><td><code class="inline-code">--export, -e</code></td><td>导出格式：none（默认）/ md / html</td><td>可选</td></tr>
             <tr><td><code class="inline-code">--output, -o</code></td><td>保存报告到文件（自动识别格式）</td><td>可选</td></tr>
@@ -353,7 +361,25 @@ jirin version
 
 # 查看帮助
 jirin --help
-jirin analyze --help</code></pre>
+jirin analyze --help
+
+# 测试 LLM 连接
+jirin test connection
+
+# 查看可用模型列表
+jirin test models
+
+# 查看当前配置
+jirin config show
+
+# 修改配置项
+jirin config set llm.model "deepseek-chat"
+
+# 检查升级
+jirin upgrade check
+
+# 执行升级
+jirin upgrade run</code></pre>
 
         <h3>多平台日志目录支持</h3>
         <table>
@@ -491,6 +517,7 @@ cp config/settings.example.toml config/settings.toml</code></pre>
     <div class="container">
         <h2>注意事项</h2>
         <div class="alert alert-info"><strong>CLI 模式需要 LLM 配置：</strong>首次使用 CLI 前必须配置 LLM API Key。如果使用本地模型（Ollama），请确保 Ollama 服务已启动。插件模式无需配置。</div>
+        <div class="alert alert-success"><strong>配置自动发现：</strong>Jirin 会自动搜索当前工作目录和安装目录下的 <code class="inline-code">config/settings.toml</code>。所有命令的 <code class="inline-code">--config</code> 参数均为可选，无需在项目目录中也可正常使用。</div>
         <div class="alert alert-warning"><strong>日志输入支持文件和目录：</strong><code class="inline-code">jirin analyze</code> 的参数既可以是单个日志文件路径，也可以是日志目录路径。目录模式下会自动识别高通/MTK/展锐平台结构。</div>
         <div class="alert alert-info"><strong>多平台支持：</strong>支持高通、MTK、展锐三大平台的日志目录结构自动识别。遇到新结构时，可使用 <code class="inline-code">jirin learn-structure</code> 命令教工具学习。</div>
         <div class="alert alert-success"><strong>飞书集成：</strong>使用 <code class="inline-code">--export md</code> 或 <code class="inline-code">--output report.md</code> 生成的报告可直接导入飞书文档。</div>
@@ -516,10 +543,13 @@ cp config/settings.example.toml config/settings.toml</code></pre>
             <tr><td>支持国产模型吗？</td><td>支持！DeepSeek、通义千问、Kimi 等通过 OpenAI 兼容 API 接入，详见 LLM 接入指南</td></tr>
             <tr><td>如何跳过反馈提示？</td><td>使用 <code class="inline-code">jirin analyze crash.log --no-feedback</code></td></tr>
             <tr><td>MIXED 分析是什么意思？</td><td>当日志同时包含多种问题类型（如 JE + ANR），系统会进行跨类型因果关联分析</td></tr>
+            <tr><td>如何验证 LLM 配置是否正确？</td><td>运行 <code class="inline-code">jirin test connection</code> 快速验证连接</td></tr>
+            <tr><td>不在项目目录能用吗？</td><td>可以。Jirin 会自动搜索配置文件，无需在特定目录中运行</td></tr>
+            <tr><td>如何升级 Jirin？</td><td>在项目目录执行 <code class="inline-code">jirin upgrade run</code>，或手动 <code class="inline-code">pip install --upgrade -e .</code></td></tr>
         </table>
     </div>
 </section>
 
-<footer><div class="container"><p>Jirin v0.4.0 | Android Stability Analysis AI Agent</p></div></footer>
+<footer><div class="container"><p>Jirin v0.5.0 | Android Stability Analysis AI Agent</p></div></footer>
 </body>
 </html>

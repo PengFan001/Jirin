@@ -10,6 +10,9 @@ api_key = ""
 api_base = ""
 temperature = 0.1
 max_tokens = 4096
+# Per-request timeout in seconds (default: 120)
+# Increase for reasoning models or large log analysis
+timeout = 120
 
 # --- Example: OpenAI ---
 # provider = "openai"
@@ -28,9 +31,9 @@ max_tokens = 4096
 # api_key = "sk-xxx"
 # api_base = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
-# --- Example: Kimi K3 (Moonshot) ---
+# --- Example: Kimi (Moonshot) ---
 # provider = "openai"
-# model = "kimi-k3"
+# model = "kimi-k2.7-code"
 # api_key = "sk-xxx"
 # api_base = "https://api.moonshot.cn/v1"
 
@@ -78,3 +81,8 @@ output_dir = ".jirin/exports"
 # When configured, agents can search actual source code for framework classes/methods.
 # When not set, agents use built-in framework path knowledge (always available).
 # aosp_source_dir = "/path/to/android/source"
+
+[output]
+# Output language: zh-CN (Chinese Simplified), en-US (English), ja-JP (Japanese)
+# Controls the language of analysis reports and summaries
+language = "zh-CN"

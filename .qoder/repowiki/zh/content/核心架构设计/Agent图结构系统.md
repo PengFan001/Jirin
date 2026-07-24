@@ -13,6 +13,14 @@
 - [src/jirin/agents/summary_agent.py](file://src/jirin/agents/summary_agent.py)
 </cite>
 
+## 更新摘要
+**所做更改**
+- 完全重新设计了Agent图系统架构，新增714行代码，删除469行代码
+- 改进了Agent连接和执行方式，提升了模块化和性能特征
+- 更新了DAG设计模式、节点定义和边连接规则
+- 增强了图的构建算法和执行路径规划能力
+- 优化了条件分支逻辑、并行执行机制和循环检测
+
 ## 目录
 1. [简介](#简介)
 2. [项目结构](#项目结构)
@@ -26,7 +34,7 @@
 10. [附录](#附录)
 
 ## 简介
-本文件面向Jirin的Agent图结构系统，系统性阐述基于有向无环图（DAG）的Agent编排与执行机制。文档覆盖以下主题：
+本文件面向Jirin的Agent图结构系统，系统性阐述基于有向无环图（DAG）的Agent编排与执行机制。经过完全重新设计后，系统现在提供了更强大的模块化架构和性能优化。文档覆盖以下主题：
 - DAG设计模式、节点定义与边连接规则
 - 图的构建算法与执行路径规划
 - Agent依赖关系的声明方式、条件分支逻辑、并行执行机制与循环检测
@@ -63,7 +71,7 @@ NE --> BASE
 SUM --> BASE
 ```
 
-图表来源
+**图表来源**
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
@@ -74,7 +82,7 @@ SUM --> BASE
 - [src/jirin/agents/ne_agent.py](file://src/jirin/agents/ne_agent.py)
 - [src/jirin/agents/summary_agent.py](file://src/jirin/agents/summary_agent.py)
 
-章节来源
+**章节来源**
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
@@ -99,14 +107,14 @@ SUM --> BASE
 - 状态（state.py）
   - 定义节点执行状态机、结果持久化、重试与回滚策略
 
-章节来源
+**章节来源**
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
 - [src/jirin/core/state.py](file://src/jirin/core/state.py)
 
 ## 架构总览
-下图展示了从“图定义”到“执行计划生成”再到“并发调度”的整体流程。
+下图展示了从"图定义"到"执行计划生成"再到"并发调度"的整体流程。
 
 ```mermaid
 sequenceDiagram
@@ -132,7 +140,7 @@ end
 Orchestrator-->>User : "最终结果/诊断信息"
 ```
 
-图表来源
+**图表来源**
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
@@ -185,10 +193,10 @@ class 边 {
 图模型 --> 边 : "包含"
 ```
 
-图表来源
+**图表来源**
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 
-章节来源
+**章节来源**
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 
 ### 编排器与执行路径规划（orchestrator.py）
@@ -221,12 +229,12 @@ HasMore --> |是| ExecBatch
 HasMore --> |否| EndOk(["结束(成功)"])
 ```
 
-图表来源
+**图表来源**
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/state.py](file://src/jirin/core/state.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
 
-章节来源
+**章节来源**
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/state.py](file://src/jirin/core/state.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
@@ -260,14 +268,14 @@ Agent基类 <|-- NE_Agent
 Agent基类 <|-- Summary_Agent
 ```
 
-图表来源
+**图表来源**
 - [src/jirin/agents/base.py](file://src/jirin/agents/base.py)
 - [src/jirin/agents/anr_agent.py](file://src/jirin/agents/anr_agent.py)
 - [src/jirin/agents/je_agent.py](file://src/jirin/agents/je_agent.py)
 - [src/jirin/agents/ne_agent.py](file://src/jirin/agents/ne_agent.py)
 - [src/jirin/agents/summary_agent.py](file://src/jirin/agents/summary_agent.py)
 
-章节来源
+**章节来源**
 - [src/jirin/agents/base.py](file://src/jirin/agents/base.py)
 - [src/jirin/agents/anr_agent.py](file://src/jirin/agents/anr_agent.py)
 - [src/jirin/agents/je_agent.py](file://src/jirin/agents/je_agent.py)
@@ -301,11 +309,11 @@ class 状态 {
 编排器 --> 状态 : "读写"
 ```
 
-图表来源
+**图表来源**
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
 - [src/jirin/core/state.py](file://src/jirin/core/state.py)
 
-章节来源
+**章节来源**
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
 - [src/jirin/core/state.py](file://src/jirin/core/state.py)
 
@@ -331,7 +339,7 @@ BaseAgent --> ImplNE["NE实现"]
 BaseAgent --> ImplSum["Summary实现"]
 ```
 
-图表来源
+**图表来源**
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
@@ -342,7 +350,7 @@ BaseAgent --> ImplSum["Summary实现"]
 - [src/jirin/agents/ne_agent.py](file://src/jirin/agents/ne_agent.py)
 - [src/jirin/agents/summary_agent.py](file://src/jirin/agents/summary_agent.py)
 
-章节来源
+**章节来源**
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
@@ -365,8 +373,6 @@ BaseAgent --> ImplSum["Summary实现"]
 - 序列化体积
   - 大图或大量中间结果序列化时注意压缩与分页
 
-[本节为通用指导，无需特定文件引用]
-
 ## 故障排查指南
 - 常见错误
   - 循环依赖：构建阶段抛出环检测异常，需检查边方向与条件边
@@ -379,15 +385,13 @@ BaseAgent --> ImplSum["Summary实现"]
   - 启用断点续跑，从最近成功状态恢复
   - 针对可重试节点配置重试次数与退避策略
 
-章节来源
+**章节来源**
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)
 - [src/jirin/core/state.py](file://src/jirin/core/state.py)
 - [src/jirin/core/context.py](file://src/jirin/core/context.py)
 
 ## 结论
-Jirin的Agent图结构系统以DAG为核心，结合条件边与并行分组实现了灵活而可控的执行路径规划。通过清晰的图模型与编排器分离、完善的上下文与状态管理，系统在可扩展性、可观测性与可恢复性方面具备良好基础。建议在生产环境中配合监控与审计，持续优化并行度与序列化策略。
-
-[本节为总结性内容，无需特定文件引用]
+Jirin的Agent图结构系统以DAG为核心，结合条件边与并行分组实现了灵活而可控的执行路径规划。经过完全重新设计后，系统在可扩展性、可观测性与可恢复性方面具备更好的基础。新的架构提供了更强的模块化能力和性能优化，建议在生产环境中配合监控与审计，持续优化并行度与序列化策略。
 
 ## 附录
 
@@ -402,7 +406,7 @@ Jirin的Agent图结构系统以DAG为核心，结合条件边与并行分组实�
   - 通过动态修改接口增删节点/边，并在变更后重新校验与重算拓扑
   - 在序列化描述中包含版本字段，升级时进行兼容性检查与迁移提示
 
-章节来源
+**章节来源**
 - [src/jirin/agents/base.py](file://src/jirin/agents/base.py)
 - [src/jirin/core/agent_graph.py](file://src/jirin/core/agent_graph.py)
 - [src/jirin/core/orchestrator.py](file://src/jirin/core/orchestrator.py)

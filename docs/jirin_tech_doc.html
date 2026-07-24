@@ -63,7 +63,7 @@
     <div class="container">
         <h1>Jirin 技术架构文档</h1>
         <p>Android 稳定性问题分析 AI Agent - 系统设计与实现方案</p>
-        <div class="meta">Version 0.4.0 | 2025</div>
+        <div class="meta">Version 0.5.0 | 2025</div>
     </div>
 </header>
 
@@ -121,7 +121,9 @@
                     <div class="arch-box">analyze 命令<small>日志分析入口</small></div>
                     <div class="arch-box">learn 命令<small>知识库管理</small></div>
                     <div class="arch-box">export 命令<small>插件导出</small></div>
-                    <div class="arch-box">config 命令<small>配置管理</small></div>
+                    <div class="arch-box">config 命令<small>配置管理（自动发现）</small></div>
+                    <div class="arch-box">upgrade 命令<small>版本升级</small></div>
+                    <div class="arch-box">test 命令<small>LLM 连接测试</small></div>
                     <div class="arch-box">report 模块<small>text/md/html 输出</small></div>
                 </div>
             </div>
@@ -374,7 +376,8 @@
 │   │   ├── state.py            # AnalysisState 状态定义
 │   │   ├── context.py          # ExecutionContext 上下文
 │   │   ├── agent_graph.py      # LangGraph 图定义
-│   │   └── orchestrator.py     # 分类 + 路由
+│   │   ├── orchestrator.py     # 分类 + 路由（async）
+│   │   └── llm_client.py       # LLM 统一客户端 (重试/超时/reasoning_content)
 │   ├── agents/                 # Agent 层
 │   │   ├── base.py             # BaseAgent 抽象基类
 │   │   ├── je_agent.py         # JE 分析 Agent
@@ -412,16 +415,23 @@
 │   ├── utils/
 │   │   └── logging_config.py   # 结构化日志配置
 │   └── cli/                    # CLI 入口
-│       └── main.py             # Typer 应用
+│       ├── main.py             # Typer 应用
+│       └── commands/           # 子命令
+│           ├── analyze.py      # 分析命令
+│           ├── config.py       # 配置管理（自动发现）
+│           ├── export.py       # 导出命令
+│           ├── learn.py        # 学习命令
+│           ├── upgrade.py      # 升级命令
+│           └── test_llm.py     # LLM 连接测试
 ├── .jirin/                     # 运行时数据（隐藏目录）
 └── tests/                      # 测试</code></pre>
 
         <h3>8.2 关键实现要点</h3>
         <table>
             <tr><th>模块</th><th>关键实现</th></tr>
-            <tr><td>Orchestrator</td><td>正则预分类 + LLM 精确分类，两阶段策略降低 LLM 调用成本</td></tr>
+            <tr><td>Orchestrator</td><td>async 执行模型，正则预分类 + LLM 精确分类，两阶段策略降低 LLM 调用成本</td></tr>
             <tr><td>Agent 基类</td><td>模板方法模式，子类只需实现 prompt 构建，共享 LLMClient</td></tr>
-            <tr><td>LLMClient</td><td>统一 LLM 调用，指数退避重试，超时控制，结构化错误降级</td></tr>
+            <tr><td>LLMClient</td><td>统一 LLM 调用，指数退避重试，可配置超时，reasoning_content 解析，结构化错误降级</td></tr>
             <tr><td>并行路由</td><td>LangGraph Send API 实现真正的 fan-out 并行多 Agent 执行</td></tr>
             <tr><td>Correlator</td><td>MIXED 场景下跨类型因果关联分析，确定因果链和修复优先级</td></tr>
             <tr><td>AOSP 源码搜索</td><td>双层架构：30+ 内置框架路径 + 可选本地源码深度搜索</td></tr>
@@ -431,11 +441,14 @@
             <tr><td>报告输出</td><td>纯文本/Markdown/HTML 三种输出格式，默认纯文本</td></tr>
             <tr><td>日志解析</td><td>专业解析器（je_parser/anr_parser/ne_parser）提取丰富结构化数据，替代旧版正则提取</td></tr>
             <tr><td>自学习</td><td>分析后 LLM 反思提取模式 → 分类归档 → 向量索引，形成闭环</td></tr>
+            <tr><td>配置自动发现</td><td>搜索 CWD + 包目录，所有 CLI 命令统一支持 --config 可选参数</td></tr>
+            <tr><td>升级命令</td><td>jirin upgrade check/run/reinstall，pip 重新安装 + 依赖刷新</td></tr>
+            <tr><td>LLM 测试</td><td>jirin test connection/models，连接验证 + 可用模型列表</td></tr>
             <tr><td>导出</td><td>支持 Qoder Skill / Cursor Rules / Codex AGENTS.md / 通用 Markdown</td></tr>
         </table>
     </div>
 </section>
 
-<footer><div class="container"><p>Jirin v0.4.0 | Technical Architecture Document</p></div></footer>
+<footer><div class="container"><p>Jirin v0.5.0 | Technical Architecture Document</p></div></footer>
 </body>
 </html>
