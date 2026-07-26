@@ -21,6 +21,7 @@ from jirin.cli.commands.export import export_app
 from jirin.cli.commands.config import config_app
 from jirin.cli.commands.upgrade import upgrade_app
 from jirin.cli.commands.test_llm import test_app
+from jirin.cli.commands.setup import setup_app
 
 app = typer.Typer(
     name="jirin",
@@ -37,6 +38,7 @@ app.add_typer(export_app, name="export", help="Export agent as skill/plugin")
 app.add_typer(config_app, name="config", help="Manage configuration")
 app.add_typer(upgrade_app, name="upgrade", help="Upgrade Jirin to the latest version")
 app.add_typer(test_app, name="test", help="Test LLM API connection")
+app.add_typer(setup_app, name="setup", help="Initialize environment (download models)")
 
 
 @app.command()
@@ -90,6 +92,12 @@ def analyze(
     # Check configuration
     _check_config(config)
 
+    # Ensure embedding model is installed (auto-downloads if missing)
+    from jirin.core.embedding_setup import ensure_embedding_model
+
+    if not ensure_embedding_model(console):
+        console.print("[yellow]Continuing without knowledge retrieval...[/yellow]")
+
     # Handle directory input
     if log_path.is_dir():
         _analyze_directory(log_path, config, verbose, export_format, output, interactive)
@@ -129,6 +137,10 @@ def _analyze_file(
         raise typer.Exit(1)
 
     _output_result(result, export_format, output)
+
+    # Show retrieval and learning status
+    _show_retrieval_status(result)
+    _show_learning_status(result, verbose)
 
     if interactive:
         _collect_feedback(result, config)
@@ -206,8 +218,9 @@ def _analyze_directory(
 
     _output_result(result, export_format, output)
 
-    # Directory mode: feedback is disabled (batch analysis)
-    # Only single-file mode collects feedback (handled in _analyze_file)
+    # Show retrieval and learning status
+    _show_retrieval_status(result)
+    _show_learning_status(result, verbose)
 
 
 def _output_result(result, export_format: str, output: Path | None) -> None:
@@ -245,6 +258,48 @@ def _output_result(result, export_format: str, output: Path | None) -> None:
         console.print(f"\n[dim]Warnings: {len(result.errors)} issue(s) during analysis[/dim]")
         for error in result.errors:
             console.print(f"  [dim]- {error}[/dim]")
+
+
+def _show_learning_status(result, verbose: bool) -> None:
+    """Display the learning pipeline execution status."""
+    metadata = result.metadata if hasattr(result, "metadata") and isinstance(result.metadata, dict) else {}
+    learning_status = metadata.get("learning_status")
+
+    if learning_status == "success":
+        case_id = metadata.get("case_id", "")
+        pattern = metadata.get("root_cause_pattern", "")
+        category = metadata.get("root_cause_category", "")
+        console.print(f"\n[green]Learning:[/green] Case saved [dim]({case_id})[/dim]")
+        if pattern:
+            console.print(f"  [dim]Pattern: {pattern}[/dim]")
+        if category:
+            console.print(f"  [dim]Category: {category}[/dim]")
+    elif learning_status == "skipped":
+        console.print("\n[dim]Learning: Skipped (no patterns extracted)[/dim]")
+    elif metadata.get("learning_error"):
+        error_msg = metadata["learning_error"]
+        console.print(f"\n[yellow]Learning: Failed[/yellow] [dim]({error_msg})[/dim]")
+        if verbose:
+            console.print("[dim]Run with --verbose for more details.[/dim]")
+    # If no learning_status and no agent_results, learning didn't run (expected)
+
+
+def _show_retrieval_status(result) -> None:
+    """Display knowledge retrieval statistics."""
+    metadata = result.metadata if hasattr(result, "metadata") and isinstance(result.metadata, dict) else {}
+    stats = metadata.get("retrieval_stats")
+    if not stats:
+        return
+
+    snippets = stats.get("knowledge_snippets", 0)
+    cases = stats.get("similar_cases", 0)
+
+    if snippets > 0 or cases > 0:
+        console.print(
+            f"[dim]Knowledge:[/dim] {snippets} snippet(s), {cases} similar case(s) retrieved"
+        )
+    else:
+        console.print("[dim]Knowledge: No relevant knowledge found[/dim]")
 
 
 def _collect_feedback(result, config: Path | None) -> None:

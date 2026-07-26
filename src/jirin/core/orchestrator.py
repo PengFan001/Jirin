@@ -103,8 +103,14 @@ class OrchestratorAgent:
         state.parsed_data = self._extract_key_info(log, detected)
 
         # Retrieve relevant knowledge
-        state.relevant_knowledge = self._retrieve_knowledge(detected)
+        state.relevant_knowledge = self._retrieve_knowledge(log, detected)
         state.similar_cases = self._retrieve_similar_cases(log, detected)
+
+        # Store retrieval stats in metadata for CLI display
+        state.metadata["retrieval_stats"] = {
+            "knowledge_snippets": len(state.relevant_knowledge),
+            "similar_cases": len(state.similar_cases),
+        }
 
         return state
 
@@ -204,37 +210,50 @@ JSON response:"""
 
         return parsed
 
-    def _retrieve_knowledge(self, detected: list[IssueType]) -> list[str]:
-        """Retrieve relevant knowledge for detected issue types."""
+    def _retrieve_knowledge(self, log: str, detected: list[IssueType]) -> list[str]:
+        """Retrieve relevant knowledge using log-aware queries.
+
+        Uses the actual log content as the search query instead of
+        fixed text like "anr analysis principles", resulting in more
+        relevant knowledge retrieval.
+        """
         try:
             km = self.context.knowledge_manager
-            snippets = []
-            for issue_type in detected:
-                if issue_type in (IssueType.JE, IssueType.ANR, IssueType.NE):
-                    results = km.search_static_knowledge(
-                        query=f"{issue_type.value} analysis principles",
-                        top_k=3,
-                    )
-                    snippets.extend(results)
-            return snippets
-        except Exception:
+            # Use log content as query for more precise retrieval
+            log_query = log[:500]
+            results = km.search_static_knowledge(
+                query=log_query,
+                top_k=3,
+            )
+            logger.info(
+                "Knowledge retrieval: found %d snippets for types=%s",
+                len(results),
+                [t.value for t in detected],
+            )
+            return results
+        except Exception as e:
+            logger.warning("Knowledge retrieval failed: %s", e)
             return []
 
     def _retrieve_similar_cases(
         self, log: str, detected: list[IssueType]
     ) -> list[dict[str, Any]]:
-        """Retrieve similar historical cases."""
+        """Retrieve similar historical cases with logging."""
         try:
             km = self.context.knowledge_manager
-            cases = []
-            for issue_type in detected:
-                if issue_type in (IssueType.JE, IssueType.ANR, IssueType.NE):
-                    results = km.search_similar_cases(
-                        query=log[:2000],
-                        issue_type=issue_type.value,
-                        top_k=3,
-                    )
-                    cases.extend(results)
+            # Search with the primary type for most relevant cases
+            primary = detected[0] if detected else IssueType.UNKNOWN
+            cases = km.search_similar_cases(
+                query=log[:2000],
+                issue_type=primary.value if primary != IssueType.UNKNOWN else None,
+                top_k=3,
+            )
+            logger.info(
+                "Similar cases retrieval: found %d cases for types=%s",
+                len(cases),
+                [t.value for t in detected],
+            )
             return cases
-        except Exception:
+        except Exception as e:
+            logger.warning("Similar cases retrieval failed: %s", e)
             return []

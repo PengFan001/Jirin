@@ -26,14 +26,14 @@ REFLECT_PROMPT = """You are an Android stability analysis reviewer. Given the fo
 5. What category does this root cause belong to?
 
 Provide your response as a JSON object:
-{
+{{
     "root_cause_pattern": "Brief description of the pattern",
     "key_indicators": ["list of key indicators"],
     "solution_category": "Category of the solution",
     "is_common_pattern": true/false,
     "recurrence_likelihood": "high/medium/low",
     "tags": ["relevant tags for future retrieval"]
-}
+}}
 
 Analysis result:
 {analysis}
@@ -116,17 +116,60 @@ class Reflector:
         return self._parse_learnings(response.content)
 
     def _parse_learnings(self, content: str) -> dict[str, Any]:
-        """Parse LLM response into learnings dict."""
-        try:
-            # Match outermost braces to handle nested JSON
-            start = content.find("{")
-            end = content.rfind("}")
-            if start != -1 and end > start:
-                return json.loads(content[start:end + 1])
-        except (json.JSONDecodeError, ValueError):
-            pass
-
+        """Parse LLM response into learnings dict.
+    
+        Handles cases where reasoning models echo the prompt template
+        by trying all JSON blocks from last to first, and filtering
+        out template-like blocks.
+        """
+        blocks = self._find_json_blocks(content)
+        for block in blocks:
+            try:
+                parsed = json.loads(block)
+                if isinstance(parsed, dict) and self._is_valid_learnings(parsed):
+                    return parsed
+            except (json.JSONDecodeError, ValueError):
+                continue
+    
         return {"raw_learnings": content[:500]}
+    
+    def _find_json_blocks(self, content: str) -> list[str]:
+        """Find all potential JSON blocks in content.
+    
+        Returns blocks in reverse order (last first), since the actual
+        response JSON typically appears after any echoed prompt template.
+        """
+        blocks: list[str] = []
+        i = 0
+        while i < len(content):
+            start = content.find("{", i)
+            if start == -1:
+                break
+            # Find matching closing brace by tracking depth
+            depth = 0
+            for j in range(start, len(content)):
+                if content[j] == "{":
+                    depth += 1
+                elif content[j] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        blocks.append(content[start : j + 1])
+                        break
+            i = start + 1
+        # Reverse: try last block first (most likely the actual response)
+        return list(reversed(blocks))
+    
+    def _is_valid_learnings(self, parsed: dict) -> bool:
+        """Check if parsed dict looks like actual learnings, not a template.
+    
+        The REFLECT_PROMPT contains a template JSON with placeholder values
+        like "Brief description of the pattern". If the LLM echoes this
+        template, we must skip it and find the real response.
+        """
+        rcp = parsed.get("root_cause_pattern")
+        if rcp and "Brief description" not in str(rcp):
+            return True
+        return False
 
     def _summarize(self, state: AnalysisState) -> str:
         """Create a brief summary of the analysis."""

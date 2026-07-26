@@ -30,18 +30,18 @@ class BaseExporter:
         Returns:
             Dictionary mapping relative path to content.
         """
-        # Use the configured static_dir from knowledge config
-        static_dir = Path(
-            self.context.get_knowledge_config().get(
-                "static_dir", "src/jirin/knowledge/static"
-            )
+        # Use resolve_static_dir for reliable path resolution (with package fallback)
+        static_dir_cfg = self.context.get_knowledge_config().get(
+            "static_dir", "src/jirin/knowledge/static"
         )
+        static_dir = self.context.resolve_static_dir(static_dir_cfg)
 
         docs = {}
         if static_dir.exists():
             for md_file in static_dir.rglob("*.md"):
                 # Use relative path as key to preserve directory structure
-                rel_key = str(md_file.relative_to(static_dir))
+                # Use as_posix() for cross-platform consistency (always use /)
+                rel_key = md_file.relative_to(static_dir).as_posix()
                 docs[rel_key] = md_file.read_text(encoding="utf-8")
                 # Also store by filename for backward compatibility
                 docs[md_file.name] = docs[rel_key]

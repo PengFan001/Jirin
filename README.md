@@ -19,6 +19,8 @@ Jirin 是一个专注于 Android 稳定性问题分析的 AI Agent 工具。它�
 - 🔌 **IDE 插件导出** — 导出为 Qoder Skill / Cursor Rules / Codex AGENTS.md
 - 📝 **灵活输出** — 支持纯文本 / Markdown / HTML 多种报告格式
 - 🔄 **用户反馈闭环** — 分析后收集反馈，持续改进分析质量
+- ⚙️ **嵌入模型自动下载** — 首次运行自动下载向量模型，国内用户智能选择镜像源加速
+- ✅ **导出验证** — Codex 导出支持 `--check` 参数，自动验证导出内容完整性
 - 📚 **AOSP 源码引用** — 内置 30+ 框架组件路径映射，自动引用关键源码路径
 
 ---
@@ -134,6 +136,7 @@ jirin test connection
 |------|-------------|------|
 | `jirin version` | 否 | 查看版本信息，安装即可用 |
 | `jirin config init` | 否 | 初始化配置文件，安装即可用 |
+| `jirin setup` | 否 | 初始化嵌入模型，首次分析时也会自动触发 |
 | `jirin export` | 否 | 导出知识文件到 IDE，安装即可用 |
 | `jirin analyze` | **是** | 需要 LLM 进行智能分析 |
 | `jirin learn` | 部分 | 案例管理无需 LLM；反思学习需要 |
@@ -221,6 +224,7 @@ jirin export generic --output ./docs
 
 ```bash
 jirin version              # 查看版本
+jirin setup                # 初始化嵌入模型（首次分析时自动下载）
 jirin test connection      # 测试 LLM 连接
 jirin test models          # 查看可用模型列表
 jirin config show          # 查看当前配置
@@ -323,6 +327,8 @@ cp config/settings.example.toml config/settings.toml
 - **飞书集成**：使用 `--export md` 或 `--output report.md` 生成的报告可直接导入飞书文档。
 - **隐私安全**：使用云端 LLM 时请注意数据安全；如有顾虑，CLI 模式可使用本地模型（Ollama）。
 - **AOSP 源码搜索**：系统内置 30+ Android 框架组件路径映射。如需深度搜索，可在 `config/settings.toml` 中配置 `[source] aosp_source_dir` 指向本地 AOSP 源码目录。
+- **嵌入模型自动下载**：首次运行 `jirin analyze` 时，系统会自动检测并下载向量检索所需的嵌入模型（~80MB）。国内用户自动使用 HuggingFace 镜像加速，国际用户使用默认源。也可手动运行 `jirin setup` 提前下载。
+- **导出验证**：使用 `jirin export codex --check` 可在导出后自动验证 AGENTS.md 和知识文件的完整性，确保导出的内容可正常使用。
 
 ---
 
@@ -346,6 +352,16 @@ cp config/settings.example.toml config/settings.toml
 <details>
 <summary>导出到 IDE 后如何使用？</summary>
 将导出文件放入对应目录（如 <code>.cursor/rules/</code>），在 IDE Chat 中直接贴入日志即可，IDE 会自动加载知识规则。
+</details>
+
+<details>
+<summary>首次分析提示嵌入模型下载失败？</summary>
+检查网络连接；国内用户可设置环境变量 <code>HF_ENDPOINT=https://hf-mirror.com</code>；或手动运行 <code>jirin setup</code>。
+</details>
+
+<details>
+<summary>如何验证导出是否完整？</summary>
+使用 <code>jirin export codex --check</code> 或 <code>jirin export check &lt;dir&gt;</code> 自动验证导出内容完整性。
 </details>
 
 <details>

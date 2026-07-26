@@ -47,10 +47,15 @@ async def analyze_cmd(
 
     # Post-analysis learning (if analysis was successful)
     if result.agent_results:
-        case_id = await _run_learning_pipeline(context, result)
-        if case_id:
-            # Store case_id in metadata for feedback association
-            result.metadata["case_id"] = case_id
+        learning_result = await _run_learning_pipeline(context, result)
+        if learning_result:
+            # Store learning results in metadata for CLI display
+            result.metadata["case_id"] = learning_result.get("case_id")
+            result.metadata["root_cause_pattern"] = learning_result.get("root_cause_pattern", "")
+            result.metadata["root_cause_category"] = learning_result.get("root_cause_category", "")
+            result.metadata["learning_status"] = "success"
+        else:
+            result.metadata["learning_status"] = "skipped"
 
     return result
 
@@ -58,7 +63,7 @@ async def analyze_cmd(
 async def _run_learning_pipeline(
     context: ExecutionContext,
     state: AnalysisState,
-) -> str | None:
+) -> dict | None:
     """Run the post-analysis learning pipeline.
 
     Steps:
@@ -73,7 +78,8 @@ async def _run_learning_pipeline(
         state: Completed analysis state.
 
     Returns:
-        case_id if a case was saved, None otherwise.
+        Dict with case_id, root_cause_pattern, root_cause_category if successful.
+        None if skipped or failed.
     """
     try:
         from jirin.learning.reflector import Reflector
@@ -81,19 +87,24 @@ async def _run_learning_pipeline(
         from jirin.learning.memory import MemoryManager
 
         # Step 1: Reflect on the analysis
+        logger.debug("Step 1: Running reflector...")
         reflector = Reflector(context)
         learnings = await reflector.reflect(state)
+        logger.debug("Reflector returned: %s", learnings)
 
         if not learnings:
             logger.debug("No learnings extracted, skipping learning pipeline")
             return None
 
         # Step 2: Classify the root cause
+        logger.debug("Step 2: Running classifier...")
         classifier = Classifier()
         root_cause_category = classifier.classify(learnings)
         learnings["root_cause_category"] = root_cause_category
+        logger.debug("Classified as: %s", root_cause_category)
 
         # Step 3: Save to case store
+        logger.debug("Step 3: Saving to case store...")
         case_store = context.case_store
         case_data = {
             "issue_type": state.primary_type.value,
@@ -115,6 +126,7 @@ async def _run_learning_pipeline(
         logger.info("Case saved: %s (category: %s)", case_id, root_cause_category)
 
         # Step 4: Build embedding for future retrieval
+        logger.debug("Step 4: Building embedding...")
         knowledge_manager = context.knowledge_manager
         knowledge_manager.store_case_embedding(case_id, {
             "issue_type": state.primary_type.value,
@@ -122,8 +134,10 @@ async def _run_learning_pipeline(
             "analysis_summary": learnings.get("analysis_summary", ""),
             "log_excerpt": state.raw_log[:500],
         })
+        logger.debug("Embedding stored")
 
         # Step 5: Save long-term memory insights
+        logger.debug("Step 5: Saving memory insights...")
         storage_cfg = context.get_storage_config()
         memory = MemoryManager(memory_dir=storage_cfg.get("memory_dir", ".jirin/memory"))
         if learnings.get("is_common_pattern"):
@@ -137,11 +151,19 @@ async def _run_learning_pipeline(
                 category=root_cause_category,
                 tags=learnings.get("tags", []),
             )
+            logger.debug("Memory insight added")
 
         logger.info("Learning pipeline complete for case %s", case_id)
-        return case_id
+        return {
+            "case_id": case_id,
+            "root_cause_pattern": learnings.get("root_cause_pattern", ""),
+            "root_cause_category": root_cause_category,
+        }
 
     except Exception as e:
         # Learning failure should not block the analysis result
         logger.warning("Learning pipeline failed (non-fatal): %s", e)
+        logger.debug("Learning pipeline traceback:", exc_info=True)
+        # Store error info in state metadata for CLI display
+        state.metadata["learning_error"] = str(e)
         return None

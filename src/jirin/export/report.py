@@ -167,21 +167,21 @@ def format_html(state: AnalysisState) -> str:
     for agent_name, result in state.agent_results.items():
         evidence_html = ""
         if result.key_evidence:
-            items = "\n".join(f"<li><code>{e}</code></li>" for e in result.key_evidence)
+            items = "\n".join(f"<li><code>{_html_escape(e)}</code></li>" for e in result.key_evidence)
             evidence_html = f"<h4>关键证据</h4><ul>{items}</ul>"
 
         suggestions_html = ""
         if result.suggestions:
-            items = "\n".join(f"<li>{s}</li>" for s in result.suggestions)
+            items = "\n".join(f"<li>{_html_escape(s)}</li>" for s in result.suggestions)
             suggestions_html = f"<h4>修复建议</h4><ol>{items}</ol>"
 
         detail_html = ""
         if result.analysis_detail:
-            detail_html = f"<h4>分析详情</h4><pre>{result.analysis_detail}</pre>"
+            detail_html = f"<h4>分析详情</h4><pre>{_html_escape(result.analysis_detail)}</pre>"
 
         agent_sections.append(f"""
         <div class="agent-card">
-            <h3>{agent_name}</h3>
+            <h3>{_html_escape(agent_name)}</h3>
             <div class="result-meta">
                 <span class="badge root-cause">根因: {_html_escape(result.root_cause)}</span>
                 <span class="badge responsible">责任方: {_html_escape(result.responsible_party)}</span>
@@ -236,7 +236,7 @@ def format_html(state: AnalysisState) -> str:
     <h2>分析摘要</h2>
     <table>
         <tr><th>分析项</th><th>结果</th></tr>
-        {"".join(f'<tr><td><strong>{name}</strong> 根因</td><td>{_html_escape(r.root_cause)}</td></tr><tr><td><strong>{name}</strong> 责任方</td><td>{_html_escape(r.responsible_party)}</td></tr>' for name, r in state.agent_results.items())}
+        {"".join(f'<tr><td><strong>{_html_escape(name)}</strong> 根因</td><td>{_html_escape(r.root_cause)}</td></tr><tr><td><strong>{_html_escape(name)}</strong> 责任方</td><td>{_html_escape(r.responsible_party)}</td></tr>' for name, r in state.agent_results.items())}
     </table>
 
     <h2>详细分析</h2>

@@ -10,6 +10,7 @@ Supports all OpenAI-compatible providers: OpenAI, DeepSeek, Qwen, Kimi, Ollama, 
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -196,7 +197,6 @@ class LLMClient:
             if attempt < self.max_retries:
                 wait_time = 2 ** attempt
                 logger.debug("Retrying in %ds...", wait_time)
-                import asyncio
                 await asyncio.sleep(wait_time)
 
         # All retries exhausted

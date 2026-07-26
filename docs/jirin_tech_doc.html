@@ -122,6 +122,7 @@
                     <div class="arch-box">learn 命令<small>知识库管理</small></div>
                     <div class="arch-box">export 命令<small>插件导出</small></div>
                     <div class="arch-box">config 命令<small>配置管理（自动发现）</small></div>
+                    <div class="arch-box">setup 命令<small>嵌入模型初始化</small></div>
                     <div class="arch-box">upgrade 命令<small>版本升级</small></div>
                     <div class="arch-box">test 命令<small>LLM 连接测试</small></div>
                     <div class="arch-box">report 模块<small>text/md/html 输出</small></div>
@@ -163,6 +164,7 @@
                 <div class="arch-boxes">
                     <div class="arch-box">httpx<small>OpenAI 兼容 API 直连</small></div>
                     <div class="arch-box">ChromaDB<small>向量存储</small></div>
+                    <div class="arch-box">Embedding Setup<small>模型自动下载(镜像优化)</small></div>
                     <div class="arch-box">JSON Store<small>案例持久化</small></div>
                     <div class="arch-box">Exporter<small>Skill/Rules/Codex</small></div>
                     <div class="arch-box">Report<small>text/md/html</small></div>
@@ -302,9 +304,10 @@
         <h3>5.2 知识检索流程</h3>
         <p>Agent 分析时，系统自动检索相关知识：</p>
         <ol style="margin: 12px 0 12px 24px;">
-            <li>根据问题类型检索对应的静态知识文档</li>
-            <li>使用日志内容在向量库中搜索相似历史案例</li>
+            <li>使用日志内容（前 500 字符）作为检索 query，而非固定文本，提升检索精准度</li>
+            <li>在向量库中搜索静态知识文档和相似历史案例</li>
             <li>将检索结果作为上下文注入 Agent 的 Prompt</li>
+            <li>CLI 层展示检索统计（知识片段数 + 相似案例数），便于调试</li>
         </ol>
         <h3>5.3 AOSP 源码搜索</h3>
         <p>采用双层架构，无需本地 AOSP 源码也能工作：</p>
@@ -353,14 +356,25 @@
 <section id="export-design">
     <div class="container">
         <h2>7. 导出方案</h2>
+        <h3>7.1 导出格式</h3>
         <p>导出的核心是将 <strong>知识库 + 分析流程 + Agent Prompt</strong> 打包，而非代码本身。</p>
         <table>
             <tr><th>目标</th><th>格式</th><th>内容</th></tr>
             <tr><td>Qoder</td><td>SKILL.md + assets/</td><td>Agent prompt + 知识库摘要 + 分析流程</td></tr>
             <tr><td>Cursor</td><td>.cursor/rules/</td><td>规则文件 + 分析指导</td></tr>
-            <tr><td>Codex</td><td>AGENTS.md + jirin_knowledge/</td><td>Agent 配置 + 知识库文档</td></tr>
+            <tr><td>Codex</td><td>AGENTS.md + jirin_knowledge/</td><td>Agent 配置 + 知识库文档（支持 --check 验证）</td></tr>
             <tr><td>通用</td><td>Markdown 文档包</td><td>知识库 + 方法论 + Agent prompts</td></tr>
         </table>
+
+        <h3>7.2 导出验证</h3>
+        <p>Codex 导出支持 <code class="inline-code">--check</code> 参数，导出后自动验证内容完整性：</p>
+        <ul style="margin: 8px 0 8px 24px;">
+            <li>检查 AGENTS.md 是否存在且内容充足</li>
+            <li>检查 jirin_knowledge/ 目录是否包含知识文件</li>
+            <li>检查子目录（je/anr/ne）是否完整</li>
+            <li>检测知识库是否为空（回退文本提示）</li>
+        </ul>
+        <p>也可使用独立命令 <code class="inline-code">jirin export check &lt;dir&gt;</code> 验证已有导出。</p>
     </div>
 </section>
 
@@ -411,7 +425,8 @@
 │   │   ├── generic.py          # 通用导出
 │   │   └── report.py           # 报告生成 (text/md/html)
 │   ├── core/
-│   │   └── llm_client.py       # LLM 统一客户端 (重试/超时)
+│   │   ├── embedding_setup.py  # 嵌入模型自动下载(时区检测+镜像优化)
+│   │   └── llm_client.py       # LLM 统一客户端 (重试/超时/reasoning_content)
 │   ├── utils/
 │   │   └── logging_config.py   # 结构化日志配置
 │   └── cli/                    # CLI 入口
@@ -421,6 +436,7 @@
 │           ├── config.py       # 配置管理（自动发现）
 │           ├── export.py       # 导出命令
 │           ├── learn.py        # 学习命令
+│           ├── setup.py        # 嵌入模型初始化
 │           ├── upgrade.py      # 升级命令
 │           └── test_llm.py     # LLM 连接测试
 ├── .jirin/                     # 运行时数据（隐藏目录）
@@ -444,7 +460,10 @@
             <tr><td>配置自动发现</td><td>搜索 CWD + 包目录，所有 CLI 命令统一支持 --config 可选参数</td></tr>
             <tr><td>升级命令</td><td>jirin upgrade check/run/reinstall，pip 重新安装 + 依赖刷新</td></tr>
             <tr><td>LLM 测试</td><td>jirin test connection/models，连接验证 + 可用模型列表</td></tr>
-            <tr><td>导出</td><td>支持 Qoder Skill / Cursor Rules / Codex AGENTS.md / 通用 Markdown</td></tr>
+            <tr><td>导出</td><td>支持 Qoder Skill / Cursor Rules / Codex AGENTS.md / 通用 Markdown，Codex 支持 --check 验证</td></tr>
+            <tr><td>嵌入模型</td><td>自动下载 all-MiniLM-L6-v2，时区检测区分国内外用户，国内自动使用 hf-mirror.com 加速</td></tr>
+            <tr><td>检索优化</td><td>使用日志内容作为检索 query（替代固定文本），CLI 展示检索统计信息</td></tr>
+            <tr><td>学习状态</td><td>分析后展示学习管线状态（成功/跳过/失败）和检索统计（知识片段+相似案例）</td></tr>
         </table>
     </div>
 </section>

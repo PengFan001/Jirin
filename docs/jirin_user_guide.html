@@ -61,7 +61,7 @@
     <div class="container">
         <h1>Jirin</h1>
         <p>Android 稳定性问题分析 AI Agent</p>
-        <span class="badge">v0.5.0 | JE / ANR / NE 分析 | MIXED 关联 | 用户反馈 | 多平台支持 | 配置自动发现</span>
+        <span class="badge">v0.5.0 | JE / ANR / NE 分析 | MIXED 关联 | 自学习 | 嵌入模型自动下载 | 导出验证</span>
     </div>
 </header>
 <nav>
@@ -96,6 +96,8 @@
             <div class="card"><div class="icon">&#128260;</div><h4>MIXED 深度分析</h4><p>混合问题类型时自动进行跨类型因果关联分析，确定因果链和修复优先级</p></div>
             <div class="card"><div class="icon">&#128172;</div><h4>用户反馈闭环</h4><p>分析后收集反馈，存入案例库，持续改进后续分析质量</p></div>
             <div class="card"><div class="icon">&#128269;</div><h4>配置自动发现</h4><p>自动搜索当前目录和安装目录的配置文件，无需每次指定配置路径</p></div>
+            <div class="card"><div class="icon">&#9881;</div><h4>嵌入模型自动下载</h4><p>首次运行自动下载向量模型，国内用户智能选择镜像源加速</p></div>
+            <div class="card"><div class="icon">&#9989;</div><h4>导出验证</h4><p>Codex 导出支持 --check 参数，自动验证导出内容完整性</p></div>
             <div class="card"><div class="icon">&#128218;</div><h4>AOSP 源码引用</h4><p>内置 30+ 框架组件路径映射，分析时自动引用 Android 源码关键路径</p></div>
         </div>
     </div>
@@ -183,6 +185,7 @@ pip install -e .</code></pre><p>安装成功后，<code class="inline-code">jiri
             <tr><td><code class="inline-code">jirin version</code></td><td>否</td><td>查看版本信息，安装即可用</td></tr>
             <tr><td><code class="inline-code">jirin config init</code></td><td>否</td><td>初始化配置文件，安装即可用</td></tr>
             <tr><td><code class="inline-code">jirin export</code></td><td>否</td><td>导出知识文件到 IDE，安装即可用</td></tr>
+            <tr><td><code class="inline-code">jirin setup</code></td><td>否</td><td>初始化嵌入模型，安装即可用（首次分析时也会自动触发）</td></tr>
             <tr><td><code class="inline-code">jirin analyze</code></td><td><strong>是</strong></td><td>需要 LLM 进行智能分析</td></tr>
             <tr><td><code class="inline-code">jirin learn</code></td><td>部分</td><td>案例管理无需 LLM；反思学习需要</td></tr>
         </table>
@@ -352,6 +355,12 @@ jirin export cursor --output ./.cursor/rules
 # 导出为 Codex AGENTS.md（放入项目根目录即可使用）
 jirin export codex --output ./codex_config
 
+# 导出 Codex 并验证内容完整性
+jirin export codex --output ./codex_config --check
+
+# 验证已有的导出内容
+jirin export check .jirin/exports/codex
+
 # 导出为通用 Markdown 文档包
 jirin export generic --output ./docs</code></pre>
 
@@ -362,6 +371,9 @@ jirin version
 # 查看帮助
 jirin --help
 jirin analyze --help
+
+# 初始化嵌入模型（通常无需手动运行，首次分析时自动下载）
+jirin setup
 
 # 测试 LLM 连接
 jirin test connection
@@ -525,6 +537,8 @@ cp config/settings.example.toml config/settings.toml</code></pre>
         <div class="alert alert-warning"><strong>隐私安全：</strong>使用云端 LLM 时请注意数据安全；如有顾虑，CLI 模式可使用本地模型（Ollama），插件模式取决于 IDE 的隐私策略。</div>
         <div class="alert alert-success"><strong>持续改进：</strong>CLI 模式分析完成后，系统会自动提示反馈。直接回复 y/n/c 即可帮助系统学习。也可使用 <code class="inline-code">jirin learn feedback</code> 命令手动添加反馈。</div>
         <div class="alert alert-info"><strong>AOSP 源码搜索：</strong>系统内置 30+ Android 框架组件路径映射，分析时自动引用相关源码路径。如需深度搜索，可在 <code class="inline-code">config/settings.toml</code> 中配置 <code class="inline-code">[source] aosp_source_dir</code> 指向本地 AOSP 源码目录。</div>
+        <div class="alert alert-success"><strong>嵌入模型自动下载：</strong>首次运行 <code class="inline-code">jirin analyze</code> 时，系统会自动检测并下载向量检索所需的嵌入模型（~80MB）。国内用户自动使用 HuggingFace 镜像加速，国际用户使用默认源。也可手动运行 <code class="inline-code">jirin setup</code> 提前下载。</div>
+        <div class="alert alert-info"><strong>导出验证：</strong>使用 <code class="inline-code">jirin export codex --check</code> 可在导出后自动验证 AGENTS.md 和知识文件的完整性，确保导出的内容可正常使用。</div>
 
         <h3>常见问题</h3>
         <table>
@@ -546,6 +560,8 @@ cp config/settings.example.toml config/settings.toml</code></pre>
             <tr><td>如何验证 LLM 配置是否正确？</td><td>运行 <code class="inline-code">jirin test connection</code> 快速验证连接</td></tr>
             <tr><td>不在项目目录能用吗？</td><td>可以。Jirin 会自动搜索配置文件，无需在特定目录中运行</td></tr>
             <tr><td>如何升级 Jirin？</td><td>在项目目录执行 <code class="inline-code">jirin upgrade run</code>，或手动 <code class="inline-code">pip install --upgrade -e .</code></td></tr>
+            <tr><td>首次分析提示嵌入模型下载失败？</td><td>检查网络连接；国内用户可设置环境变量 <code class="inline-code">HF_ENDPOINT=https://hf-mirror.com</code>；或手动运行 <code class="inline-code">jirin setup</code></td></tr>
+            <tr><td>如何验证导出是否完整？</td><td>使用 <code class="inline-code">jirin export codex --check</code> 或 <code class="inline-code">jirin export check &lt;dir&gt;</code></td></tr>
         </table>
     </div>
 </section>

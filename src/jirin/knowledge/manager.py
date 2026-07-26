@@ -158,10 +158,16 @@ class KnowledgeManager:
         """
         # Try vector search first
         if self._vector_store is not None:
+            # Build metadata filter for issue_type if specified
+            where_filter = None
+            if issue_type:
+                where_filter = {"issue_type": issue_type}
+
             results = self._vector_store.search(
                 collection_name=self.CASES_COLLECTION,
                 query=query[:500],  # Use first 500 chars for embedding
                 top_k=top_k,
+                where=where_filter,
             )
 
             cases = []
@@ -172,6 +178,21 @@ class KnowledgeManager:
                     if case:
                         case["similarity"] = r.get("similarity", 0)
                         cases.append(case)
+
+            # If filtered vector search returned nothing, try without filter
+            if not cases and where_filter:
+                results = self._vector_store.search(
+                    collection_name=self.CASES_COLLECTION,
+                    query=query[:500],
+                    top_k=top_k,
+                )
+                for r in results:
+                    case_id = r.get("metadata", {}).get("case_id")
+                    if case_id and self._case_store:
+                        case = self._case_store.load_case(case_id)
+                        if case:
+                            case["similarity"] = r.get("similarity", 0)
+                            cases.append(case)
 
             if cases:
                 return cases

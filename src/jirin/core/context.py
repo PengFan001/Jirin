@@ -126,14 +126,38 @@ class ExecutionContext:
         """Get output language setting (e.g., 'zh-CN', 'en-US')."""
         return self.get_output_config().get("language", "zh-CN")
 
+    @staticmethod
+    def get_package_static_dir() -> Path:
+        """Get the static knowledge directory within the installed package.
+
+        This is the reliable fallback when the configured relative path
+        doesn't exist (e.g., after pip install from a user's project dir).
+        """
+        return Path(__file__).resolve().parent.parent / "knowledge" / "static"
+
+    @staticmethod
+    def resolve_static_dir(configured_dir: str) -> Path:
+        """Resolve static_dir with package fallback.
+
+        Priority:
+        1. Configured path (if exists)
+        2. Package-internal path (always available after install)
+        """
+        configured = Path(configured_dir)
+        if configured.exists():
+            return configured
+        return ExecutionContext.get_package_static_dir()
+
     @property
     def knowledge_manager(self) -> KnowledgeManager:
         """Lazy-initialized knowledge manager."""
         if self._knowledge_manager is None:
+            static_dir_cfg = self.get_knowledge_config().get(
+                "static_dir", "src/jirin/knowledge/static"
+            )
+            resolved_static_dir = self.resolve_static_dir(static_dir_cfg)
             self._knowledge_manager = KnowledgeManager(
-                static_dir=self.get_knowledge_config().get(
-                    "static_dir", "src/jirin/knowledge/static"
-                ),
+                static_dir=str(resolved_static_dir),
                 vector_store=self.vector_store,
                 case_store=self.case_store,
             )
